@@ -27,8 +27,8 @@ public:
 private:
     void on_window_size_change(Vec2I new_size) const;
 
+    GameWindow::WindowState m_window;
     std::unique_ptr<Renderer> m_renderer;
-    std::unique_ptr<GameWindow> m_window;
     std::unique_ptr<Input> m_input;
     std::unique_ptr<ToolRenderer> m_tool;
     std::unique_ptr<Game> m_game;

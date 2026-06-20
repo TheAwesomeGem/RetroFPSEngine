@@ -5,38 +5,26 @@
 #include <functional>
 #include <SDL3/SDL.h>
 
-class GameWindow
+#include "SDLWindowWrapper.h"
+
+namespace GameWindow
 {
-public:
-    using SizeCallback = std::function<void(Vec2I)>;
-    using EventCallback = std::function<void(const SDL_Event* event)>;
+    using SizeCallback = void(*)(Vec2I);
+    using EventCallback = void(*)(const SDL_Event* event);
 
-    NOT_COPYABLE_AND_MOVEABLE(GameWindow);
-
-    GameWindow();
-    ~GameWindow();
-
-    bool create(Vec2I size);
-
-    void loop();
-
-    [[nodiscard]] HWND get_hwnd() const
+    struct WindowState
     {
-        return m_window_handle;
-    }
+        NOT_COPYABLE_AND_MOVEABLE(WindowState);
+        WindowState() = default;
 
-    [[nodiscard]] bool should_close() const
-    {
-        return m_should_close;
-    }
+        HWND hwnd = nullptr;
+        bool should_close = false;
+        SDLWindowWrapper resource = SDLWindowWrapper{};
+        SizeCallback size_callback = nullptr;
+        EventCallback event_callback = nullptr;
+    };
 
-    SDL_Window* m_window_raw = nullptr;
-    SizeCallback m_size_callback = nullptr;
-    EventCallback m_event_callback = nullptr;
-
-private:
-    void release() const;
-
-    HWND m_window_handle = nullptr;
-    bool m_should_close = false;
-};
+    bool create(WindowState* window, Vec2I size);
+    void loop(WindowState* window);
+    void release(WindowState* window);
+}

@@ -5,62 +5,39 @@
 
 static constexpr const char* LOG_CAT = "GameWindow";
 
-GameWindow::GameWindow()
+bool GameWindow::create(WindowState* window, const Vec2I size)
 {
-    Log::info(LOG_CAT, "Constructed.");
-}
+    release(window);
 
-GameWindow::~GameWindow()
-{
-    release();
-}
-
-bool GameWindow::create(const Vec2I size)
-{
-    if (m_window_raw != nullptr)
-    {
-        release();
-    }
-
-    if (!SDL_Init(SDL_INIT_VIDEO))
-    {
-        Log::fatal(LOG_CAT, "Failed to initialize SDL.");
-        return false;
-    }
-
-    SDL_SetHint(SDL_HINT_WINDOWS_GAMEINPUT, "1");
-    m_window_raw = SDL_CreateWindow("Game Machine", size.x, size.y, SDL_WINDOW_RESIZABLE);
-
-    if (m_window_raw == nullptr)
+    auto hwnd = window->resource.create_window("Game Machine", size.x, size.y, SDL_WINDOW_RESIZABLE);
+    if (!hwnd)
     {
         Log::fatal(LOG_CAT, "Failed to create SDL Window.");
         return false;
     }
 
-    const SDL_PropertiesID h_props = SDL_GetWindowProperties(m_window_raw);
-    m_window_handle = static_cast<HWND>(SDL_GetPointerProperty(h_props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    window->hwnd = *hwnd;
 
-    if (m_window_handle == nullptr)
-    {
-        Log::fatal(LOG_CAT, "SDL Failed getting platform handle: {}", SDL_GetError());
-        return false;
-    }
+    Log::info(LOG_CAT, "Constructed GameWindow.");
 
     return true;
 }
 
-void GameWindow::loop()
+void GameWindow::loop(WindowState* window)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        m_event_callback(&event);
+        if (window->event_callback)
+        {
+            window->event_callback(&event);
+        }
 
         switch (event.type)
         {
             case SDL_EVENT_QUIT:
             {
-                m_should_close = true;
+                window->should_close = true;
                 break;
             }
 
@@ -68,9 +45,9 @@ void GameWindow::loop()
             {
                 const int width = event.window.data1;
                 const int height = event.window.data2;
-                if (m_size_callback)
+                if (window->size_callback)
                 {
-                    m_size_callback(Vec2I{ .x = width, .y = height });
+                    window->size_callback(Vec2I{ .x = width, .y = height });
                 }
                 break;
             }
@@ -78,14 +55,10 @@ void GameWindow::loop()
     }
 }
 
-void GameWindow::release() const
+void GameWindow::release(WindowState* window)
 {
-    Log::info(LOG_CAT, "Releasing the platform.");
+    Log::info(LOG_CAT, "Releasing GameWindow.");
 
-    if (m_window_raw != nullptr)
-    {
-        SDL_DestroyWindow(m_window_raw);
-    }
-
-    SDL_Quit();
+    window->hwnd = nullptr;
+    window->resource.release();
 }
