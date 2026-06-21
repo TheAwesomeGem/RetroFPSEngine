@@ -42,6 +42,7 @@ target_sources(RetroFPSEngine
         src/imgui/imgui_demo.cpp
         src/imgui/imgui_impl_dx11.cpp
         src/imgui/imgui_impl_sdl3.cpp
+        src/imgui/ImguiResource.cpp
         src/imgui/ToolRenderer.cpp
 
         PRIVATE
@@ -80,6 +81,7 @@ target_sources(RetroFPSEngine
         src/imgui/imstb_truetype.h
         src/imgui/imgui_impl_dx11.h
         src/imgui/imgui_impl_sdl3.h
+        src/imgui/ImguiResource.h
         src/imgui/ToolRenderer.h
 )
 set_property(TARGET RetroFPSEngine PROPERTY COMPILE_WARNING_AS_ERROR ON)

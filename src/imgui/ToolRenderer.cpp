@@ -7,6 +7,7 @@
 #include <d3d11_2.h>
 
 #include "imgui.h"
+#include "ImguiResource.h"
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_sdl3.h"
 
@@ -56,29 +57,30 @@ const char* get_component_type_str(ComponentType component)
     }
 }
 
-ToolRenderer::ToolRenderer()
-    : m_selected_actor_handle{ ActorHandle::invalid() }, m_add_actor_callback{ nullptr }, m_delete_actor_callback{ nullptr }
+void show_input_box(const char* label, std::string& value)
 {
+    ImGui::Text("%s: ", label);
+    char value_buffer[128]; // NOLINT(*-avoid-c-arrays)
+    strncpy_s(value_buffer, value.c_str(), sizeof(value_buffer));
+    value_buffer[sizeof(value_buffer) - 1] = '\0'; // Ensure null-termination
+    if (ImGui::InputText(label, value_buffer, sizeof(value_buffer)))
+    {
+        value = value_buffer;
+    }
 }
 
-ToolRenderer::~ToolRenderer()
+void show_readonly_input_box(const char* label, const std::string& value)
 {
-    ImGui_ImplSDL3_Shutdown();
-    ImGui_ImplDX11_Shutdown();
-    ImGui::DestroyContext();
+    ImGui::Text("%s: ", label);
+    char value_buffer[128]; // NOLINT(*-avoid-c-arrays)
+    strncpy_s(value_buffer, value.c_str(), sizeof(value_buffer));
+    value_buffer[sizeof(value_buffer) - 1] = '\0'; // Ensure null-termination
+    ImGui::InputText(label, value_buffer, sizeof(value_buffer), ImGuiInputTextFlags_ReadOnly);
 }
 
-bool ToolRenderer::init(SDL_Window* window, ID3D11Device2* device, ID3D11DeviceContext2* device_context)
+bool ToolRenderer::create(ToolState& tool, SDL_Window* window, ID3D11Device2* device, ID3D11DeviceContext2* device_context)
 {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplSDL3_InitForD3D(window);
-    ImGui_ImplDX11_Init(device, device_context);
-
-    return true;
+    return tool.imgui.create(window, device, device_context);
 }
 
 void ToolRenderer::on_event(const SDL_Event* event)
@@ -99,14 +101,14 @@ void ToolRenderer::render()
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
-void ToolRenderer::show_actor_properties(Scene& scene)
+void ToolRenderer::show_actor_properties(const ToolState& tool, Scene& scene)
 {
-    if (!m_selected_actor_handle.is_valid())
+    if (!tool.selected_actor_handle.is_valid())
     {
         return;
     }
 
-    Actor* actor = scene.get_actor(m_selected_actor_handle);
+    Actor* actor = scene.get_actor(tool.selected_actor_handle);
 
     if (actor == nullptr)
     {
@@ -191,9 +193,9 @@ void ToolRenderer::show_actor_properties(Scene& scene)
             {
                 if (ImGui::Selectable(get_component_type_str(component), false))
                 {
-                    if (m_add_component_callback != nullptr)
+                    if (tool.add_component_callback != nullptr)
                     {
-                        m_add_component_callback(actor->handle, component);
+                        tool.add_component_callback(actor->handle, component);
                     }
                 }
             }
@@ -207,9 +209,9 @@ void ToolRenderer::show_actor_properties(Scene& scene)
             {
                 if (ImGui::Selectable(get_component_type_str(component), false))
                 {
-                    if (m_delete_component_callback != nullptr)
+                    if (tool.delete_component_callback != nullptr)
                     {
-                        m_delete_component_callback(actor->handle, component);
+                        tool.delete_component_callback(actor->handle, component);
                     }
                 }
             }
@@ -222,7 +224,7 @@ void ToolRenderer::show_actor_properties(Scene& scene)
     ImGui::End();
 }
 
-void ToolRenderer::show_scene_heirarchy(const Scene& scene)
+void ToolRenderer::show_scene_heirarchy(ToolState& tool, const Scene& scene)
 {
     ImGui::Begin("Scene Heirarchy");
 
@@ -243,7 +245,7 @@ void ToolRenderer::show_scene_heirarchy(const Scene& scene)
                     continue;
                 }
 
-                show_scene_entry(scene, actor);
+                show_scene_entry(tool, scene, actor);
             }
 
             ImGui::TreePop();
@@ -256,17 +258,17 @@ void ToolRenderer::show_scene_heirarchy(const Scene& scene)
 
         if (ImGui::Button("Add Actor"))
         {
-            if (m_add_actor_callback != nullptr)
+            if (tool.add_actor_callback != nullptr)
             {
-                m_add_actor_callback();
+                tool.add_actor_callback();
             }
         }
 
         if (ImGui::Button("Delete Actor"))
         {
-            if (m_selected_actor_handle.is_valid() && m_delete_actor_callback != nullptr)
+            if (tool.selected_actor_handle.is_valid() && tool.delete_actor_callback != nullptr)
             {
-                m_delete_actor_callback(m_selected_actor_handle);
+                tool.delete_actor_callback(tool.selected_actor_handle);
             }
         }
     }
@@ -274,7 +276,7 @@ void ToolRenderer::show_scene_heirarchy(const Scene& scene)
     ImGui::End();
 }
 
-void ToolRenderer::show_scene_entry(const Scene& scene, const Actor& actor)
+void ToolRenderer::show_scene_entry(ToolState& tool, const Scene& scene, const Actor& actor)
 {
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
@@ -283,7 +285,7 @@ void ToolRenderer::show_scene_entry(const Scene& scene, const Actor& actor)
         flags |= ImGuiTreeNodeFlags_Leaf;
     }
 
-    if (m_selected_actor_handle.index == actor.handle.index)
+    if (tool.selected_actor_handle.index == actor.handle.index)
     {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
@@ -292,7 +294,7 @@ void ToolRenderer::show_scene_entry(const Scene& scene, const Actor& actor)
     {
         if (ImGui::IsItemClicked())
         {
-            m_selected_actor_handle = actor.handle;
+            tool.selected_actor_handle = actor.handle;
         }
 
         for (ActorHandle child_handle : actor.children_handles)
@@ -304,30 +306,9 @@ void ToolRenderer::show_scene_entry(const Scene& scene, const Actor& actor)
                 continue;
             }
 
-            show_scene_entry(scene, *child);
+            show_scene_entry(tool, scene, *child);
         }
 
         ImGui::TreePop();
     }
-}
-
-void ToolRenderer::show_input_box(const char* label, std::string& value)
-{
-    ImGui::Text("%s: ", label);
-    char value_buffer[128]; // NOLINT(*-avoid-c-arrays)
-    strncpy_s(value_buffer, value.c_str(), sizeof(value_buffer));
-    value_buffer[sizeof(value_buffer) - 1] = '\0'; // Ensure null-termination
-    if (ImGui::InputText(label, value_buffer, sizeof(value_buffer)))
-    {
-        value = value_buffer;
-    }
-}
-
-void ToolRenderer::show_readonly_input_box(const char* label, const std::string& value)
-{
-    ImGui::Text("%s: ", label);
-    char value_buffer[128]; // NOLINT(*-avoid-c-arrays)
-    strncpy_s(value_buffer, value.c_str(), sizeof(value_buffer));
-    value_buffer[sizeof(value_buffer) - 1] = '\0'; // Ensure null-termination
-    ImGui::InputText(label, value_buffer, sizeof(value_buffer), ImGuiInputTextFlags_ReadOnly);
 }

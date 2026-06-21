@@ -16,11 +16,11 @@
 
 static constexpr const char* LOG_CAT = "Game";
 
-Game::Game(Renderer* renderer, ToolRenderer* tool)
+Game::Game(Renderer* renderer, ToolRenderer::ToolState& tool)
     : m_scene{},
       m_renderer{ renderer },
       m_input{ nullptr },
-      m_tool{ tool },
+      m_tool{ &tool },
       m_player_handle{ ActorHandle::invalid() },
       m_crate_handle{ ActorHandle::invalid() },
       m_is_tool_shown{ false }
@@ -39,82 +39,82 @@ void Game::create(Input::InputState& input)
     uuids::uuid crate_texture_id = m_renderer->upload_texture("texture/crate.png");
     uuids::uuid uv_test_texture_id = m_renderer->upload_texture("texture/uv_test.png");
 
-    // Hook up callbacks
-    {
-        m_tool->m_add_actor_callback = [this]()
-        {
-            m_scene.spawn_actor(std::format("Actor {}", RandomExt::range(0, 99999)));
-        };
-
-        m_tool->m_delete_actor_callback = [this](ActorHandle handle)
-        {
-            m_scene.destroy_actor(handle, true);
-        };
-
-        m_tool->m_add_component_callback = [this, cube_mesh_id, crate_texture_id](ActorHandle handle, ComponentType component)
-        {
-            Actor* actor = m_scene.get_actor(handle);
-
-            if (actor == nullptr)
-            {
-                return;
-            }
-
-            switch (component)
-            {
-                case ComponentType::static_mesh_render:
-                {
-                    m_scene.attach_mesh_render(
-                        actor->handle, m_scene.create_mesh_render(
-                            cube_mesh_id, crate_texture_id, ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
-                        )
-                    );
-                    break;
-                }
-                case ComponentType::camera:
-                {
-                    m_scene.attach_camera(actor->handle, m_scene.create_projected_camera(Config::VFOV, 0.1F, 100.0F));
-                    break;
-                }
-                case ComponentType::transform:
-                case ComponentType::count:
-                default:
-                {
-                    break;
-                }
-            }
-        };
-
-        m_tool->m_delete_component_callback = [this](ActorHandle handle, ComponentType component)
-        {
-            Actor* actor = m_scene.get_actor(handle);
-
-            if (actor == nullptr)
-            {
-                return;
-            }
-
-            switch (component)
-            {
-                case ComponentType::static_mesh_render:
-                {
-                    actor->mesh_render = std::nullopt;
-                    break;
-                }
-                case ComponentType::camera:
-                {
-                    actor->camera = std::nullopt;
-                    break;
-                }
-                case ComponentType::transform:
-                case ComponentType::count:
-                default:
-                {
-                    break;
-                }
-            }
-        };
-    }
+    // Hook up tools
+    // if (m_tool){
+    //     m_tool->m_add_actor_callback = [this]()
+    //     {
+    //         m_scene.spawn_actor(std::format("Actor {}", RandomExt::range(0, 99999)));
+    //     };
+    //
+    //     m_tool->m_delete_actor_callback = [this](ActorHandle handle)
+    //     {
+    //         m_scene.destroy_actor(handle, true);
+    //     };
+    //
+    //     m_tool->m_add_component_callback = [this, cube_mesh_id, crate_texture_id](ActorHandle handle, ComponentType component)
+    //     {
+    //         Actor* actor = m_scene.get_actor(handle);
+    //
+    //         if (actor == nullptr)
+    //         {
+    //             return;
+    //         }
+    //
+    //         switch (component)
+    //         {
+    //             case ComponentType::static_mesh_render:
+    //             {
+    //                 m_scene.attach_mesh_render(
+    //                     actor->handle, m_scene.create_mesh_render(
+    //                         cube_mesh_id, crate_texture_id, ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
+    //                     )
+    //                 );
+    //                 break;
+    //             }
+    //             case ComponentType::camera:
+    //             {
+    //                 m_scene.attach_camera(actor->handle, m_scene.create_projected_camera(Config::VFOV, 0.1F, 100.0F));
+    //                 break;
+    //             }
+    //             case ComponentType::transform:
+    //             case ComponentType::count:
+    //             default:
+    //             {
+    //                 break;
+    //             }
+    //         }
+    //     };
+    //
+    //     m_tool->m_delete_component_callback = [this](ActorHandle handle, ComponentType component)
+    //     {
+    //         Actor* actor = m_scene.get_actor(handle);
+    //
+    //         if (actor == nullptr)
+    //         {
+    //             return;
+    //         }
+    //
+    //         switch (component)
+    //         {
+    //             case ComponentType::static_mesh_render:
+    //             {
+    //                 actor->mesh_render = std::nullopt;
+    //                 break;
+    //             }
+    //             case ComponentType::camera:
+    //             {
+    //                 actor->camera = std::nullopt;
+    //                 break;
+    //             }
+    //             case ComponentType::transform:
+    //             case ComponentType::count:
+    //             default:
+    //             {
+    //                 break;
+    //             }
+    //         }
+    //     };
+    // }
 
     // Spawn actors
     {
@@ -255,18 +255,18 @@ void Game::update(double delta_time)
         // =================
     }
 
-    m_tool->update();
+    ToolRenderer::update();
 }
 
 void Game::render()
 {
     m_renderer->begin_draw();
     m_scene.render(m_renderer);
-    if (m_is_tool_shown)
+    if (m_tool && m_is_tool_shown)
     {
-        m_tool->show_scene_heirarchy(m_scene);
-        m_tool->show_actor_properties(m_scene);
+        ToolRenderer::show_scene_heirarchy(*m_tool, m_scene);
+        ToolRenderer::show_actor_properties(*m_tool, m_scene);
     }
-    m_tool->render();
+    ToolRenderer::render();
     m_renderer->end_draw();
 }

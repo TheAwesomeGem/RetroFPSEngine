@@ -4,44 +4,36 @@
 
 #pragma once
 
+#include "ImguiResource.h"
 #include "imgui_impl_sdl3.h"
 #include "../Common.h"
 #include "src/scene/Scene.h"
 
-
-struct SDL_Window;
-struct ID3D11Device2;
-struct ID3D11DeviceContext2;
-
-class ToolRenderer
+namespace ToolRenderer
 {
-public:
-    using AddActorCallback = std::function<void()>;
-    using DeleteActorCallback = std::function<void(ActorHandle handle)>;
-    using AddComponentCallback = std::function<void(ActorHandle handle, ComponentType component)>;
-    using DeleteComponentCallback = std::function<void(ActorHandle handle, ComponentType component)>;
+    using AddActorCallback = void(*)();
+    using DeleteActorCallback = void(*)(ActorHandle handle);
+    using AddComponentCallback = void(*)(ActorHandle handle, ComponentType component);
+    using DeleteComponentCallback = void(*)(ActorHandle handle, ComponentType component);
 
-    NOT_COPYABLE_AND_MOVEABLE(ToolRenderer);
+    struct ToolState
+    {
+        NOT_COPYABLE_AND_MOVEABLE(ToolState);
+        ToolState() = default;
 
-    ToolRenderer();
-    ~ToolRenderer();
+        ImguiResource imgui = ImguiResource{};
+        ActorHandle selected_actor_handle = ActorHandle {};
+        AddActorCallback add_actor_callback = nullptr;
+        DeleteActorCallback delete_actor_callback = nullptr;
+        AddComponentCallback add_component_callback = nullptr;
+        DeleteComponentCallback delete_component_callback = nullptr;
+    };
 
-    bool init(SDL_Window* window, ID3D11Device2* device, ID3D11DeviceContext2* device_context);
+    bool create(ToolState& tool, SDL_Window* window, ID3D11Device2* device, ID3D11DeviceContext2* device_context);
     void on_event(const SDL_Event* event);
     void update();
     void render();
-    void show_actor_properties(Scene& scene);
-    void show_scene_heirarchy(const Scene& scene);
-    void show_scene_entry(const Scene& scene, const Actor& actor);
-
-    AddActorCallback m_add_actor_callback;
-    DeleteActorCallback m_delete_actor_callback;
-    AddComponentCallback m_add_component_callback;
-    DeleteComponentCallback m_delete_component_callback;
-
-private:
-    void show_input_box(const char* label, std::string& value);
-    void show_readonly_input_box(const char* label, const std::string& value);
-
-    ActorHandle m_selected_actor_handle;
-};
+    void show_actor_properties(const ToolState& tool, Scene& scene);
+    void show_scene_heirarchy(ToolState& tool, const Scene& scene);
+    void show_scene_entry(ToolState& tool, const Scene& scene, const Actor& actor);
+}
