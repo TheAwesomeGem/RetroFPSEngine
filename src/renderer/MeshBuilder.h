@@ -7,9 +7,9 @@
 
 namespace MeshBuilder
 {
-    inline CpuMeshData make_cube_mesh()
+    inline MeshHolder::CpuMeshData make_cube_mesh()
     {
-        CpuMeshData cube_mesh;
+        MeshHolder::CpuMeshData cube_mesh;
 
         // Front face
         cube_mesh.pos.emplace_back(-1.0F, -1.0F, 1.0F);

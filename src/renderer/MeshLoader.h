@@ -12,7 +12,7 @@
 
 namespace MeshLoader
 {
-    inline CpuMeshData load_mesh(const char* file_path)
+    inline MeshHolder::CpuMeshData load_mesh(const char* file_path)
     {
         assert(std::filesystem::exists(file_path));
 
@@ -28,7 +28,7 @@ namespace MeshLoader
         assert(scene->HasMeshes());
 
         aiMesh* mesh = scene->mMeshes[0];
-        CpuMeshData mesh_data = {};
+        MeshHolder::CpuMeshData mesh_data = {};
 
         for (size_t i = 0; i < mesh->mNumVertices; ++i)
         {

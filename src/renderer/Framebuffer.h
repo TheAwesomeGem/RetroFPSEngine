@@ -7,34 +7,31 @@
 #include <dxgi1_5.h>
 
 #include "Adapter.h"
+#include "RenderContext.h"
 #include "src/Common.h"
 
-
-class RenderContext;
-class Adapter;
-class RenderDebug;
-
-class Framebuffer
+namespace Framebuffer
 {
-public:
-    NOT_COPYABLE_AND_MOVEABLE(Framebuffer);
-
-    Framebuffer(RenderDebug* debug, Adapter* adapter, RenderContext* context);
-    void init(HWND window_handle);
-    void update_size();
-    void clear() const;
-    void present() const;
-    [[nodiscard]] Vec2I get_size() const
+    struct BufferState
     {
-        return m_size;
-    }
+        NOT_COPYABLE_AND_MOVEABLE(BufferState);
+        BufferState() = default;
 
-    com_ptr<IDXGISwapChain4> m_swap_chain;
-    com_ptr<ID3D11RenderTargetView> m_color_buffer_view;
-    com_ptr<ID3D11DepthStencilView> m_depth_buffer_view;
-private:
-    Vec2I m_size;
-    RenderDebug* m_debug;
-    Adapter* m_adapter;
-    RenderContext* m_context;
-};
+        com_ptr<IDXGISwapChain4> swap_chain = {};
+        com_ptr<ID3D11RenderTargetView> color_buffer_view = {};
+        com_ptr<ID3D11DepthStencilView> depth_buffer_view = {};
+        Vec2I size = Vec2I{ .x = 0, .y = 0 };
+    };
+
+    void create(
+        BufferState& buffer,
+        const RenderDebug::DebugState& debug,
+        const Adapter::AdapterState& adapter,
+        const RenderContext::ContextState& context,
+        HWND window_handle
+    );
+    void update_size(BufferState& buffer, const RenderDebug::DebugState& debug, const RenderContext::ContextState& context);
+    void clear(const BufferState& buffer, const RenderContext::ContextState& context);
+    void present(const BufferState& buffer);
+
+}

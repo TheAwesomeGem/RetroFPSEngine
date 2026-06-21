@@ -23,7 +23,7 @@ struct StaticMeshDrawData
 {
     uuids::uuid mesh_id = uuids::uuid{};
     uuids::uuid texture_id = uuids::uuid{};
-    ShaderRenderType shader_type = ShaderRenderType::textured;
+    ShaderHolder::ShaderRenderType shader_type = ShaderHolder::ShaderRenderType::textured;
     Color tint_color = Color{ 1.0F, 1.0F, 1.0F, 1.0F };
 };
 
@@ -50,21 +50,21 @@ public:
 
     [[nodiscard]] Vec2I get_viewport_size() const
     {
-        return m_framebuffer.get_size();
+        return m_framebuffer.size;
     }
 
     [[nodiscard]] D3DToolContext get_tool_context() const
     {
-        return D3DToolContext{ .m_device = m_context.m_device, .m_context = m_context.m_context };
+        return D3DToolContext{ .m_device = m_context.device, .m_context = m_context.context };
     }
 
 private:
-    RenderDebug m_debug;
-    Adapter m_adapter;
-    RenderContext m_context;
-    Framebuffer m_framebuffer;
-    RenderGlobalBuffer m_globalbuffer;
-    ShaderHolder m_shaderholder;
-    TextureHolder m_textureholder;
-    MeshHolder m_meshholder;
+    RenderDebug::DebugState m_debug = RenderDebug::DebugState{};
+    Adapter::AdapterState m_adapter = Adapter::AdapterState{};
+    RenderContext::ContextState m_context = RenderContext::ContextState{};
+    Framebuffer::BufferState m_framebuffer = Framebuffer::BufferState{};
+    RenderGlobalBuffer::BufferState m_globalbuffer = RenderGlobalBuffer::BufferState{};
+    ShaderHolder::HolderState m_shaderholder = ShaderHolder::HolderState{};
+    TextureHolder::HolderState m_textureholder = TextureHolder::HolderState{};
+    MeshHolder::HolderState m_meshholder = MeshHolder::HolderState{};
 };

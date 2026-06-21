@@ -15,7 +15,7 @@ public:
 
     explicit Game(Renderer* renderer, ToolRenderer::ToolState& tool);
     void create(Input::InputState& input);
-    void update(double delta_time);
+    void update(const GameWindow::WindowState& window, double delta_time);
     void render();
 
 private:

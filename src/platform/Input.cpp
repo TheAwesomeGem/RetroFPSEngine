@@ -7,14 +7,13 @@
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_mouse.h>
 
-void Input::enable_mouse_cursor(const InputState& input, bool is_enabled)
+void Input::enable_mouse_cursor(const GameWindow::WindowState& window, bool is_enabled)
 {
-    SDL_SetWindowRelativeMouseMode(input.window->window.wnd, !is_enabled);
+    SDL_SetWindowRelativeMouseMode(window.window.wnd, !is_enabled);
 }
 
 void Input::create(InputState& input, const GameWindow::WindowState& window)
 {
-    input.window = &window;
     SDL_SetWindowRelativeMouseMode(window.window.wnd, true);
 
     int key_count = 0;

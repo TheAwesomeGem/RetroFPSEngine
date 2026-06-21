@@ -11,16 +11,11 @@
 
 using RendererCommon::LOG_CAT;
 
-Adapter::Adapter(RenderDebug* debug)
-    : m_debug{ debug }
+void Adapter::create(AdapterState& adapter, const RenderDebug::DebugState& debug)
 {
-}
+    RenderDebug::check(debug, CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(adapter.factory.put())));
 
-void Adapter::init()
-{
-    m_debug->check(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(m_factory.put())));
-
-    if (!m_factory)
+    if (!adapter.factory)
     {
         Log::fatal(LOG_CAT, "Failed creating dxgi factory.");
 
@@ -28,7 +23,7 @@ void Adapter::init()
     }
 
     com_ptr<IDXGIAdapter1> old_adapter;
-    m_debug->check(m_factory->EnumAdapters1(0, old_adapter.put()));
+    RenderDebug::check(debug, adapter.factory->EnumAdapters1(0, old_adapter.put()));
 
     if (!old_adapter)
     {
@@ -37,9 +32,9 @@ void Adapter::init()
         return;
     }
 
-    m_debug->check(old_adapter->QueryInterface(IID_PPV_ARGS(m_gpu.put())));
+    RenderDebug::check(debug, old_adapter->QueryInterface(IID_PPV_ARGS(adapter.gpu.put())));
 
-    if (!m_gpu)
+    if (!adapter.gpu)
     {
         Log::fatal(LOG_CAT, "Failed fetching video adapter v4.");
 
@@ -48,22 +43,9 @@ void Adapter::init()
     }
 
     DXGI_ADAPTER_DESC3 adapter_desc;
-    m_debug->check(m_gpu->GetDesc3(&adapter_desc));
+    RenderDebug::check(debug, adapter.gpu->GetDesc3(&adapter_desc));
 
     Log::info(
         LOG_CAT, "Active GPU is {}", StringUtils::wide_to_utf8(adapter_desc.Description)
     );
-}
-
-const char* Adapter::get_feature_level_str(D3D_FEATURE_LEVEL feature_level)
-{
-    switch (feature_level)
-    {
-        case D3D_FEATURE_LEVEL_11_0:
-            return "11.0";
-        case D3D_FEATURE_LEVEL_11_1:
-            return "11.1";
-        default:
-            return "Unsupported";
-    }
 }

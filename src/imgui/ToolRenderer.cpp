@@ -11,7 +11,7 @@
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_sdl3.h"
 
-std::string uuid_to_string(const uuids::uuid& id)
+static std::string uuid_to_string(const uuids::uuid& id)
 {
     std::span<std::byte const> byte_span = id.as_bytes();
 
@@ -25,22 +25,22 @@ std::string uuid_to_string(const uuids::uuid& id)
     );
 }
 
-const char* get_shader_type_str(ShaderRenderType shader_type)
+static const char* get_shader_type_str(ShaderHolder::ShaderRenderType shader_type)
 {
     switch (shader_type)
     {
-        case ShaderRenderType::textured:
+        case ShaderHolder::ShaderRenderType::textured:
             return "Textured";
-        case ShaderRenderType::colored:
+        case ShaderHolder::ShaderRenderType::colored:
             return "Colored";
-        case ShaderRenderType::count:
+        case ShaderHolder::ShaderRenderType::count:
             return "Error";
         default:
             return "Unknown";
     }
 }
 
-const char* get_component_type_str(ComponentType component)
+static const char* get_component_type_str(ComponentType component)
 {
     switch (component)
     {
@@ -57,7 +57,7 @@ const char* get_component_type_str(ComponentType component)
     }
 }
 
-void show_input_box(const char* label, std::string& value)
+static void show_input_box(const char* label, std::string& value)
 {
     ImGui::Text("%s: ", label);
     char value_buffer[128]; // NOLINT(*-avoid-c-arrays)
@@ -69,7 +69,7 @@ void show_input_box(const char* label, std::string& value)
     }
 }
 
-void show_readonly_input_box(const char* label, const std::string& value)
+static void show_readonly_input_box(const char* label, const std::string& value)
 {
     ImGui::Text("%s: ", label);
     char value_buffer[128]; // NOLINT(*-avoid-c-arrays)
@@ -158,9 +158,9 @@ void ToolRenderer::show_actor_properties(const ToolState& tool, Scene& scene)
         const char* current_shader_type = get_shader_type_str(actor->mesh_render->shader_type);
         if (ImGui::BeginCombo("Shader Type", current_shader_type))
         {
-            for (int i = 0; i < (int)ShaderRenderType::count; ++i)
+            for (int i = 0; i < (int)ShaderHolder::ShaderRenderType::count; ++i)
             {
-                ShaderRenderType type = (ShaderRenderType)i;
+                ShaderHolder::ShaderRenderType type = (ShaderHolder::ShaderRenderType)i;
                 bool is_selected = (actor->mesh_render->shader_type == type);
                 if (ImGui::Selectable(get_shader_type_str(type), is_selected))
                 {

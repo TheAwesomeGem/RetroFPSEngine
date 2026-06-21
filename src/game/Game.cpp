@@ -128,21 +128,21 @@ void Game::create(Input::InputState& input)
         m_crate_handle = m_scene.spawn_actor("Crate", Vec3F{ 0.0F, 0.5F, 2.0F }, Vec3F::Zero, Vec3F{ 0.5F, 0.5F, 0.5F });
         m_scene.attach_mesh_render(
             m_crate_handle, m_scene.create_mesh_render(
-                suzanne_mesh_id, uv_test_texture_id, ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
+                suzanne_mesh_id, uv_test_texture_id, ShaderHolder::ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
 
         ActorHandle floor_handle = m_scene.spawn_actor("Floor", Vec3F{ 0.0F, -1.0F, 0.0F }, Vec3F::Zero, Vec3F{ 50.0F, 1.0F, 50.0F });
         m_scene.attach_mesh_render(
             floor_handle, m_scene.create_mesh_render(
-                cube_mesh_id, uuids::uuid{}, ShaderRenderType::colored, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
+                cube_mesh_id, uuids::uuid{}, ShaderHolder::ShaderRenderType::colored, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
     }
     // ================
 }
 
-void Game::update(double delta_time)
+void Game::update(const GameWindow::WindowState& window, double delta_time)
 {
     m_scene.update(delta_time);
 
@@ -158,7 +158,7 @@ void Game::update(double delta_time)
         if (Input::is_key_just_pressed(*m_input, SDL_SCANCODE_ESCAPE))
         {
             m_is_tool_shown = !m_is_tool_shown;
-            Input::enable_mouse_cursor(*m_input, m_is_tool_shown);
+            Input::enable_mouse_cursor(window, m_is_tool_shown);
         }
     }
     // ===============

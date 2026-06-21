@@ -9,16 +9,19 @@
 #include "src/Common.h"
 
 
-class RenderDebug
+namespace RenderDebug
 {
-public:
-    NOT_COPYABLE_AND_MOVEABLE(RenderDebug);
+    struct DebugState
+    {
+        NOT_COPYABLE_AND_MOVEABLE(DebugState);
+        DebugState() = default;
 
-    RenderDebug() = default;
-    void init();
-    void process_debug_messages() const;
-    void check(HRESULT hr) const;
-    void sh_check(HRESULT res, ID3DBlob* error_message) const;
+        com_ptr<IDXGIInfoQueue> debug_info = {};
+    };
 
-    com_ptr<IDXGIInfoQueue> m_debug_info;
-};
+    void create(DebugState& debug);
+    void process_debug_messages(const DebugState& debug);
+    void check(const DebugState& debug, HRESULT hr);
+    void sh_check(const DebugState& debug, HRESULT res, ID3DBlob* error_message);
+
+}

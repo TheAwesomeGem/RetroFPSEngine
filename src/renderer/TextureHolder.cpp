@@ -15,12 +15,7 @@
 
 using RendererCommon::LOG_CAT;
 
-TextureHolder::TextureHolder(RenderDebug* debug, RenderContext* context)
-    : m_debug{ debug }, m_context{ context }
-{
-}
-
-void TextureHolder::init()
+void TextureHolder::create(HolderState& holder, const RenderDebug::DebugState& debug, const RenderContext::ContextState& context)
 {
     // init samplers
     {
@@ -30,11 +25,11 @@ void TextureHolder::init()
         sampler_state_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
         sampler_state_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
         sampler_state_desc.MaxAnisotropy = 1;
-        m_debug->check(
-            m_context->m_device->CreateSamplerState(&sampler_state_desc, m_sampler.put())
+        RenderDebug::check(debug,
+            context.device->CreateSamplerState(&sampler_state_desc, holder.sampler.put())
         );
 
-        if (m_sampler == nullptr)
+        if (holder.sampler == nullptr)
         {
             Log::fatal(LOG_CAT, "Failed to create basic texture sampler.");
 
@@ -44,19 +39,19 @@ void TextureHolder::init()
     // =================
 }
 
-void TextureHolder::setup_initial_pipeline()
+void TextureHolder::setup_initial_pipeline(const HolderState& holder, const RenderContext::ContextState& context)
 {
-    m_context->m_context->PSSetSamplers(0, 1, m_sampler.addressof());
+    context.context->PSSetSamplers(0, 1, holder.sampler.addressof());
 }
 
-uuids::uuid TextureHolder::upload_texture(std::string_view texture_file_name)
+uuids::uuid TextureHolder::upload_texture(HolderState& holder, const RenderDebug::DebugState& debug, const RenderContext::ContextState& context, std::string_view texture_file_name)
 {
     com_ptr<ID3D11Resource> texture;
     com_ptr<ID3D11ShaderResourceView> texture_view;
     // NOTE: This generates 10x of the file size of a png as the memory required to load. So 100kb file = 1mb of memory required in CPU
-    m_debug->check(
+    RenderDebug::check(debug,
         DirectX::CreateWICTextureFromFile(
-            m_context->m_device.get(), StringUtils::utf8_to_wide(texture_file_name).data(), texture.put(), texture_view.put()
+            context.device.get(), StringUtils::utf8_to_wide(texture_file_name).data(), texture.put(), texture_view.put()
         )
     );
 
@@ -69,7 +64,7 @@ uuids::uuid TextureHolder::upload_texture(std::string_view texture_file_name)
 
     uuids::uuid id = RandomExt::id();
 
-    m_textures.emplace(id, GpuTextureData{ .texture_view = texture_view });
+    holder.textures.emplace(id, GpuTextureData{ .texture_view = texture_view });
 
     return id;
 }

@@ -12,11 +12,11 @@
 
 using RendererCommon::LOG_CAT;
 
-void RenderDebug::init()
+void RenderDebug::create(DebugState& debug)
 {
-    check(DXGIGetDebugInterface1(0, IID_PPV_ARGS(m_debug_info.put())));
+    check(debug, DXGIGetDebugInterface1(0, IID_PPV_ARGS(debug.debug_info.put())));
 
-    if (!m_debug_info)
+    if (!debug.debug_info)
     {
         Log::fatal(LOG_CAT, "Failed getting debug interface.");
 
@@ -25,21 +25,21 @@ void RenderDebug::init()
     }
 }
 
-void RenderDebug::process_debug_messages() const
+void RenderDebug::process_debug_messages(const DebugState& debug)
 {
     const GUID log_level = DXGI_DEBUG_ALL;
 
-    if (!m_debug_info)
+    if (!debug.debug_info)
     {
         return;
     }
 
-    const uint64_t message_count = m_debug_info->GetNumStoredMessages(log_level);
+    const uint64_t message_count = debug.debug_info->GetNumStoredMessages(log_level);
 
     for (uint64_t i = 0; i < message_count; ++i)
     {
         size_t message_len = 0;
-        HRESULT log_result = m_debug_info->GetMessageA(log_level, i, nullptr, &message_len);
+        HRESULT log_result = debug.debug_info->GetMessageA(log_level, i, nullptr, &message_len);
 
         if (FAILED(log_result))
         {
@@ -51,7 +51,7 @@ void RenderDebug::process_debug_messages() const
         std::vector<byte> message_buffer;
         message_buffer.reserve(message_len);
         DXGI_INFO_QUEUE_MESSAGE* message = reinterpret_cast<DXGI_INFO_QUEUE_MESSAGE*>(message_buffer.data());
-        log_result = m_debug_info->GetMessageA(log_level, i, message, &message_len);
+        log_result = debug.debug_info->GetMessageA(log_level, i, message, &message_len);
 
         if (FAILED(log_result))
         {
@@ -121,25 +121,25 @@ void RenderDebug::process_debug_messages() const
         }
     }
 
-    m_debug_info->ClearStoredMessages(log_level);
+    debug.debug_info->ClearStoredMessages(log_level);
 }
 
-void RenderDebug::check(HRESULT hr) const
+void RenderDebug::check(const DebugState& debug, HRESULT hr)
 {
     if (FAILED(hr))
     {
-        process_debug_messages();
+        process_debug_messages(debug);
 
         const _com_error err = _com_error{ hr };
         Log::fatal(LOG_CAT, "Error. hr=0x{:x}. Reason: {}", err.WCode(), err.ErrorMessage());
     }
 }
 
-void RenderDebug::sh_check(HRESULT res, ID3DBlob* error_message) const
+void RenderDebug::sh_check(const DebugState& debug, HRESULT res, ID3DBlob* error_message)
 {
     if (FAILED(res) || error_message != nullptr)
     {
-        process_debug_messages();
+        process_debug_messages(debug);
 
         if (error_message != nullptr)
         {

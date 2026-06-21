@@ -13,48 +13,44 @@
 
 using RendererCommon::LOG_CAT;
 
-RenderContext::RenderContext(RenderDebug* debug, Adapter* adapter)
-    : m_debug{ debug }, m_adapter{ adapter }
-{
-}
-
-void RenderContext::init()
+void RenderContext::create(RenderContext::ContextState& context, const RenderDebug::DebugState& debug, const Adapter::AdapterState& adapter)
 {
     constexpr auto requested_feature_levels = std::to_array<D3D_FEATURE_LEVEL>({ D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0 });
     com_ptr<ID3D11Device> device;
-    com_ptr<ID3D11DeviceContext> context;
-    m_debug->check(
+    com_ptr<ID3D11DeviceContext> device_context;
+    RenderDebug::check(
+        debug,
         D3D11CreateDevice(
-            m_adapter->m_gpu.get(),
+            adapter.gpu.get(),
             D3D_DRIVER_TYPE_UNKNOWN,
             nullptr, // only for software rendering
             D3D11_CREATE_DEVICE_DEBUG,
             requested_feature_levels.data(),
             // ReSharper disable once CppRedundantCastExpression
             (uint32_t)std::size(requested_feature_levels),
-            D3D11_SDK_VERSION, device.put(), nullptr, context.put()
+            D3D11_SDK_VERSION, device.put(), nullptr, device_context.put()
         )
     );
 
-    if (!device || !context)
+    if (!device || !device_context)
     {
         Log::fatal(LOG_CAT, "Failed creating device and context.");
 
         return;
     }
 
-    m_debug->check(device->QueryInterface(IID_PPV_ARGS(m_device.put())));
+    RenderDebug::check(debug,device->QueryInterface(IID_PPV_ARGS(context.device.put())));
 
-    if (!m_device)
+    if (!context.device)
     {
         Log::fatal(LOG_CAT, "Failed getting device v2.");
 
         return;
     }
 
-    m_debug->check(context->QueryInterface(IID_PPV_ARGS(m_context.put())));
+    RenderDebug::check(debug,device_context->QueryInterface(IID_PPV_ARGS(context.context.put())));
 
-    if (!m_context)
+    if (!context.context)
     {
         Log::fatal(LOG_CAT, "Failed getting context v2.");
 
@@ -63,7 +59,7 @@ void RenderContext::init()
     }
 }
 
-void RenderContext::setup_initial_pipeline()
+void RenderContext::setup_initial_pipeline(const RenderContext::ContextState& context)
 {
-    m_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }

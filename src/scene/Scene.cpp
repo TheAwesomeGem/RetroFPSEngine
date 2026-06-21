@@ -68,7 +68,7 @@ void Scene::render(Renderer* renderer)
     }
 }
 
-StaticMeshRender Scene::create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderRenderType shader_type, Color tint_color)
+StaticMeshRender Scene::create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderHolder::ShaderRenderType shader_type, Color tint_color)
 {
     return StaticMeshRender{
         .mesh_id = mesh_id,

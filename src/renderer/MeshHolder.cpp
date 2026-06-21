@@ -17,16 +17,41 @@
 using RendererCommon::LOG_CAT;
 
 
-MeshHolder::MeshHolder(RenderDebug* debug, RenderContext* context)
-    : m_debug{ debug }, m_context{ context }, m_static_meshes{}
+static MeshHolder::VertexAttrib create_vertex_attrib(
+    const RenderDebug::DebugState& debug,
+    const RenderContext::ContextState& context,
+    const void* data,
+    uint32_t element_count,
+    uint32_t stride
+    )
+{
+    D3D11_BUFFER_DESC buffer_desc = {};
+    buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    buffer_desc.ByteWidth = element_count * stride;
+    buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
+    const D3D11_SUBRESOURCE_DATA sub_data = D3D11_SUBRESOURCE_DATA{ .pSysMem = data, .SysMemPitch = 0, .SysMemSlicePitch = 0 };
+    com_ptr<ID3D11Buffer> vertex_buffer;
+    RenderDebug::check(debug, context.device->CreateBuffer(&buffer_desc, &sub_data, vertex_buffer.put()));
+
+    if (!vertex_buffer)
+    {
+        Log::fatal(LOG_CAT, "Failed to create vertex buffer for mesh.");
+
+        return MeshHolder::VertexAttrib{};
+    }
+
+    return MeshHolder::VertexAttrib{
+        .buffer = vertex_buffer,
+        .stride = stride,
+        .element_count = element_count
+    };
+}
+
+void MeshHolder::create()
 {
 }
 
-void MeshHolder::init()
-{
-}
-
-uuids::uuid MeshHolder::upload_mesh(const char* file_path)
+uuids::uuid MeshHolder::upload_mesh(HolderState& holder, const RenderDebug::DebugState& debug, const RenderContext::ContextState& context, const char* file_path)
 {
     CpuMeshData cpu_mesh = MeshLoader::load_mesh(file_path);
 
@@ -34,6 +59,8 @@ uuids::uuid MeshHolder::upload_mesh(const char* file_path)
     gpu_mesh.index_count = (int)std::size(cpu_mesh.indices);
 
     VertexAttrib attrib = create_vertex_attrib(
+        debug,
+        context,
         cpu_mesh.pos.data(),
         (uint32_t)cpu_mesh.pos.size(),
         sizeof(*cpu_mesh.pos.data())
@@ -42,6 +69,8 @@ uuids::uuid MeshHolder::upload_mesh(const char* file_path)
     gpu_mesh.strides.emplace_back(attrib.stride);
 
     attrib = create_vertex_attrib(
+    debug,
+    context,
         cpu_mesh.normals.data(),
         (uint32_t)cpu_mesh.normals.size(),
         sizeof(*cpu_mesh.normals.data())
@@ -50,6 +79,8 @@ uuids::uuid MeshHolder::upload_mesh(const char* file_path)
     gpu_mesh.strides.emplace_back(attrib.stride);
 
     attrib = create_vertex_attrib(
+    debug,
+    context,
         cpu_mesh.uv.data(),
         (uint32_t)cpu_mesh.uv.size(),
         sizeof(*cpu_mesh.uv.data())
@@ -64,7 +95,7 @@ uuids::uuid MeshHolder::upload_mesh(const char* file_path)
     const D3D11_SUBRESOURCE_DATA data = D3D11_SUBRESOURCE_DATA{
         .pSysMem = cpu_mesh.indices.data(), .SysMemPitch = 0, .SysMemSlicePitch = 0
     };
-    m_debug->check(m_context->m_device->CreateBuffer(&buffer_desc, &data, gpu_mesh.index_buffer.put()));
+    RenderDebug::check(debug, context.device->CreateBuffer(&buffer_desc, &data, gpu_mesh.index_buffer.put()));
 
     if (!gpu_mesh.index_buffer)
     {
@@ -75,32 +106,7 @@ uuids::uuid MeshHolder::upload_mesh(const char* file_path)
 
     uuids::uuid id = RandomExt::id();
 
-    m_static_meshes.emplace(id, std::move(gpu_mesh));
+    holder.static_meshes.emplace(id, std::move(gpu_mesh));
 
     return id;
-}
-
-
-VertexAttrib MeshHolder::create_vertex_attrib(const void* data, uint32_t element_count, uint32_t stride) const
-{
-    D3D11_BUFFER_DESC buffer_desc = {};
-    buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    buffer_desc.ByteWidth = element_count * stride;
-    buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
-    const D3D11_SUBRESOURCE_DATA sub_data = D3D11_SUBRESOURCE_DATA{ .pSysMem = data, .SysMemPitch = 0, .SysMemSlicePitch = 0 };
-    com_ptr<ID3D11Buffer> vertex_buffer;
-    m_debug->check(m_context->m_device->CreateBuffer(&buffer_desc, &sub_data, vertex_buffer.put()));
-
-    if (!vertex_buffer)
-    {
-        Log::fatal(LOG_CAT, "Failed to create vertex buffer for mesh.");
-
-        return VertexAttrib{};
-    }
-
-    return VertexAttrib{
-        .buffer = vertex_buffer,
-        .stride = stride,
-        .element_count = element_count
-    };
 }

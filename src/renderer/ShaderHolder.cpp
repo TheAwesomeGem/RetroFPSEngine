@@ -14,12 +14,82 @@
 
 using RendererCommon::LOG_CAT;
 
-ShaderHolder::ShaderHolder(RenderDebug* debug, RenderContext* context)
-    : m_debug{ debug }, m_context{ context }
+static std::pair<const char*, const char*> get_shader_file_names(ShaderHolder::ShaderRenderType shader_render)
 {
+    switch (shader_render)
+    {
+        case ShaderHolder::ShaderRenderType::textured:
+            return std::make_pair("shader/TexturedVertexShader.hlsl", "shader/TexturedPixelShader.hlsl");
+        case ShaderHolder::ShaderRenderType::colored:
+            return std::make_pair("shader/ColoredVertexShader.hlsl", "shader/ColoredPixelShader.hlsl");
+        case ShaderHolder::ShaderRenderType::count:
+        default:
+            return std::make_pair("shader/BadVertexShader.hlsl", "shader/BadPixelShader.hlsl");
+    }
 }
 
-void ShaderHolder::init()
+static std::vector<ShaderHolder::ShaderInputElementType> get_shader_input_element_types(ShaderHolder::ShaderRenderType shader_render_type)
+{
+    switch (shader_render_type)
+    {
+        case ShaderHolder::ShaderRenderType::textured:
+        {
+            return std::vector{ ShaderHolder::ShaderInputElementType::pos, ShaderHolder::ShaderInputElementType::normal, ShaderHolder::ShaderInputElementType::uv };
+        }
+        case ShaderHolder::ShaderRenderType::colored:
+        {
+            return std::vector{ ShaderHolder::ShaderInputElementType::pos, ShaderHolder::ShaderInputElementType::normal };
+        }
+        case ShaderHolder::ShaderRenderType::count:
+        default:
+        {
+            return std::vector<ShaderHolder::ShaderInputElementType>{};
+        }
+    }
+}
+
+static std::vector<D3D11_INPUT_ELEMENT_DESC> get_shader_input_descriptions(const std::vector<ShaderHolder::ShaderInputElementType>& element_types)
+{
+    // TODO: Support multiple of the same SemanticName with SemanticIndex possibly?
+    std::vector<D3D11_INPUT_ELEMENT_DESC> input_descriptions;
+    for (const ShaderHolder::ShaderInputElementType element_type : element_types)
+    {
+        uint32_t slot = (uint32_t)element_type;
+
+        switch (element_type)
+        {
+            case ShaderHolder::ShaderInputElementType::pos:
+            {
+                input_descriptions.emplace_back(
+                    "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, slot, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+                );
+                break;
+            }
+            case ShaderHolder::ShaderInputElementType::normal:
+            {
+                input_descriptions.emplace_back(
+                    "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, slot, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+                );
+                break;
+            }
+            case ShaderHolder::ShaderInputElementType::uv:
+            {
+                input_descriptions.emplace_back(
+                    "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, slot, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+                );
+                break;
+            }
+            case ShaderHolder::ShaderInputElementType::count:
+            {
+                break;
+            }
+        }
+    }
+
+    return input_descriptions;
+}
+
+void ShaderHolder::create(HolderState& holder, const RenderDebug::DebugState& debug, const RenderContext::ContextState& context)
 {
     for (uint8_t i = 0; i < (uint8_t)ShaderRenderType::count; ++i)
     {
@@ -40,7 +110,7 @@ void ShaderHolder::init()
             return;
         }
 
-        ShaderState& shader_state = m_shaders.emplace_back();
+        ShaderState& shader_state = holder.shaders.emplace_back();
         com_ptr<ID3DBlob> shader_error_message;
 
         HRESULT res = D3DCompileFromFile(
@@ -48,7 +118,7 @@ void ShaderHolder::init()
             D3D10_SHADER_OPTIMIZATION_LEVEL1 | D3DCOMPILE_DEBUG, 0, shader_state.vertex_bytecode.put(),
             shader_error_message.put()
         );
-        m_debug->sh_check(res, shader_error_message.get());
+        RenderDebug::sh_check(debug, res, shader_error_message.get());
 
         if (!shader_state.vertex_bytecode)
         {
@@ -63,7 +133,7 @@ void ShaderHolder::init()
             D3D10_SHADER_OPTIMIZATION_LEVEL1 | D3DCOMPILE_DEBUG, 0, pixel_shader_bytecode.put(),
             shader_error_message.put()
         );
-        m_debug->sh_check(res, shader_error_message.get());
+       RenderDebug::sh_check(debug, res, shader_error_message.get());
 
         if (!pixel_shader_bytecode)
         {
@@ -72,8 +142,8 @@ void ShaderHolder::init()
             return;
         }
 
-        m_debug->check(
-            m_context->m_device->CreateVertexShader(
+        RenderDebug::check(debug,
+            context.device->CreateVertexShader(
                 shader_state.vertex_bytecode->GetBufferPointer(),
                 shader_state.vertex_bytecode->GetBufferSize(), nullptr,
                 shader_state.vertex.put()
@@ -87,8 +157,8 @@ void ShaderHolder::init()
             return;
         }
 
-        m_debug->check(
-            m_context->m_device->CreatePixelShader(
+        RenderDebug::check(debug,
+            context.device->CreatePixelShader(
                 pixel_shader_bytecode->GetBufferPointer(), pixel_shader_bytecode->GetBufferSize(),
                 nullptr, shader_state.pixel.put()
             )
@@ -104,8 +174,8 @@ void ShaderHolder::init()
         const std::vector<ShaderInputElementType> element_types = get_shader_input_element_types(shader_render);
         std::vector<D3D11_INPUT_ELEMENT_DESC> input_descriptions = get_shader_input_descriptions(element_types);
 
-        m_debug->check(
-            m_context->m_device->CreateInputLayout(
+        RenderDebug::check(debug,
+            context.device->CreateInputLayout(
                 input_descriptions.data(),
                 (uint32_t)std::size(input_descriptions),
                 shader_state.vertex_bytecode->GetBufferPointer(),
@@ -113,79 +183,4 @@ void ShaderHolder::init()
             )
         );
     }
-}
-
-std::pair<const char*, const char*> ShaderHolder::get_shader_file_names(ShaderRenderType shader_render)
-{
-    switch (shader_render)
-    {
-        case ShaderRenderType::textured:
-            return std::make_pair("shader/TexturedVertexShader.hlsl", "shader/TexturedPixelShader.hlsl");
-        case ShaderRenderType::colored:
-            return std::make_pair("shader/ColoredVertexShader.hlsl", "shader/ColoredPixelShader.hlsl");
-        case ShaderRenderType::count:
-        default:
-            return std::make_pair("shader/BadVertexShader.hlsl", "shader/BadPixelShader.hlsl");
-    }
-}
-
-std::vector<ShaderInputElementType> ShaderHolder::get_shader_input_element_types(ShaderRenderType shader_render_type)
-{
-    switch (shader_render_type)
-    {
-        case ShaderRenderType::textured:
-        {
-            return std::vector{ ShaderInputElementType::pos, ShaderInputElementType::normal, ShaderInputElementType::uv };
-        }
-        case ShaderRenderType::colored:
-        {
-            return std::vector{ ShaderInputElementType::pos, ShaderInputElementType::normal };
-        }
-        case ShaderRenderType::count:
-        default:
-        {
-            return std::vector<ShaderInputElementType>{};
-        }
-    }
-}
-
-std::vector<D3D11_INPUT_ELEMENT_DESC> ShaderHolder::get_shader_input_descriptions(const std::vector<ShaderInputElementType>& element_types)
-{
-    // TODO: Support multiple of the same SemanticName with SemanticIndex possibly?
-    std::vector<D3D11_INPUT_ELEMENT_DESC> input_descriptions;
-    for (const ShaderInputElementType element_type : element_types)
-    {
-        uint32_t slot = (uint32_t)element_type;
-
-        switch (element_type)
-        {
-            case ShaderInputElementType::pos:
-            {
-                input_descriptions.emplace_back(
-                    "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, slot, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
-                );
-                break;
-            }
-            case ShaderInputElementType::normal:
-            {
-                input_descriptions.emplace_back(
-                    "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, slot, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
-                );
-                break;
-            }
-            case ShaderInputElementType::uv:
-            {
-                input_descriptions.emplace_back(
-                    "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, slot, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
-                );
-                break;
-            }
-            case ShaderInputElementType::count:
-            {
-                break;
-            }
-        }
-    }
-
-    return input_descriptions;
 }

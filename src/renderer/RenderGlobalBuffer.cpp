@@ -11,23 +11,18 @@
 
 using RendererCommon::LOG_CAT;
 
-RenderGlobalBuffer::RenderGlobalBuffer(RenderDebug* debug, RenderContext* context)
-    : m_debug{ debug }, m_context{ context }
-{
-}
-
-void RenderGlobalBuffer::init()
+void RenderGlobalBuffer::create(BufferState& buffer, const RenderDebug::DebugState& debug, const RenderContext::ContextState& context)
 {
     D3D11_BUFFER_DESC buffer_desc = {};
     buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     buffer_desc.ByteWidth = sizeof(GlobalData);
     buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
     buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    m_debug->check(
-        m_context->m_device->CreateBuffer(&buffer_desc, nullptr, m_constant_buffer.put())
+    RenderDebug::check(debug,
+        context.device->CreateBuffer(&buffer_desc, nullptr, buffer.constant_buffer.put())
     );
 
-    if (!m_constant_buffer)
+    if (!buffer.constant_buffer)
     {
         Log::fatal(LOG_CAT, "Failed to create global constant buffer.");
 
@@ -35,8 +30,8 @@ void RenderGlobalBuffer::init()
     }
 }
 
-void RenderGlobalBuffer::setup_initial_pipeline()
+void RenderGlobalBuffer::setup_initial_pipeline(BufferState& buffer, const RenderContext::ContextState& context)
 {
-    m_context->m_context->VSSetConstantBuffers(0, 1, m_constant_buffer.addressof());
-    m_context->m_context->PSSetConstantBuffers(0, 1, m_constant_buffer.addressof());
+    context.context->VSSetConstantBuffers(0, 1, buffer.constant_buffer.addressof());
+    context.context->PSSetConstantBuffers(0, 1, buffer.constant_buffer.addressof());
 }

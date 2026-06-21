@@ -32,11 +32,10 @@ namespace Input
 
         MouseState mouse = MouseState{};
         std::vector<KeyState> keys = std::vector<KeyState>{};
-        const GameWindow::WindowState* window = nullptr;
     };
 
     void create(InputState& input, const GameWindow::WindowState& window);
-    void enable_mouse_cursor(const InputState& input, bool is_enabled);
+    void enable_mouse_cursor(const GameWindow::WindowState& window, bool is_enabled);
     void loop(InputState& input);
 
     [[nodiscard]] inline bool is_key_down(const InputState& input, SDL_Scancode key)

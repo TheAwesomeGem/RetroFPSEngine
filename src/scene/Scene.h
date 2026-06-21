@@ -128,7 +128,7 @@ struct StaticMeshRender
 {
     uuids::uuid mesh_id = uuids::uuid{};
     uuids::uuid texture_id = uuids::uuid{};
-    ShaderRenderType shader_type = ShaderRenderType::textured;
+    ShaderHolder::ShaderRenderType shader_type = ShaderHolder::ShaderRenderType::textured;
     Color tint_color = Color{ 1.0F, 1.0F, 1.0F, 1.0F };
 };
 
@@ -211,9 +211,7 @@ public:
     void load();
     void update(double delta_time);
     void render(Renderer* renderer);
-    uuids::uuid upload_texture(std::string_view texture_file_name);
-    uuids::uuid upload_mesh(const CpuMeshData& cpu_mesh);
-    StaticMeshRender create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderRenderType shader_type, Color tint_color);
+    StaticMeshRender create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderHolder::ShaderRenderType shader_type, Color tint_color);
     Camera create_projected_camera(float v_fov, float near_plane, float far_plane);
     ActorHandle spawn_actor(
         std::string name,

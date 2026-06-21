@@ -49,7 +49,7 @@ void Application::run()
 
             GameWindow::loop(m_window);
             Input::loop(m_input);
-            m_game->update(delta_time);
+            m_game->update(m_window, delta_time);
             m_game->render();
         }
     }
