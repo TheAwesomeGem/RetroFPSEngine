@@ -8,10 +8,13 @@
 
 #include "src/Config.h"
 #include "../renderer/MeshBuilder.h"
+#include "src/Log.h"
 #include "src/imgui/ToolRenderer.h"
 #include "src/util/MathExt.h"
 #include "src/util/RandomExt.h"
 #include "src/util/Vec3Ext.h"
+
+static constexpr const char* LOG_CAT = "Game";
 
 Game::Game(Renderer* renderer, ToolRenderer* tool)
     : m_scene{},
@@ -24,9 +27,9 @@ Game::Game(Renderer* renderer, ToolRenderer* tool)
 {
 }
 
-void Game::init(Input* input)
+void Game::create(Input::InputState& input)
 {
-    m_input = input;
+    m_input = &input;
     m_scene.load();
 
     uuids::uuid cube_mesh_id = m_renderer->upload_mesh("model/cube.obj");
@@ -143,12 +146,19 @@ void Game::update(double delta_time)
 {
     m_scene.update(delta_time);
 
+    if (m_input == nullptr)
+    {
+        Log::warn(LOG_CAT, "Input subsystem is not ready yet");
+
+        return;
+    }
+
     // Tooling Controls
     {
-        if (m_input->is_key_just_pressed(SDL_SCANCODE_ESCAPE))
+        if (Input::is_key_just_pressed(*m_input, SDL_SCANCODE_ESCAPE))
         {
             m_is_tool_shown = !m_is_tool_shown;
-            m_input->enable_mouse_cursor(m_is_tool_shown);
+            Input::enable_mouse_cursor(*m_input, m_is_tool_shown);
         }
     }
     // ===============
@@ -177,7 +187,7 @@ void Game::update(double delta_time)
             const float hfov = 2.0F * atanf(tanf(vfov * 0.5F) * aspect);
             const float yaw_per_px = hfov / (float)(viewport_width);
             const float pitch_per_px = vfov / (float)(viewport_height);
-            const Vec2F mouse_delta = m_input->get_mouse_delta();
+            const Vec2F mouse_delta = m_input->mouse.delta;
 
             Actor* camera = m_scene.get_actor(player->children_handles[0]);
 
@@ -202,19 +212,19 @@ void Game::update(double delta_time)
             float fwd = 0.0F;
             float rgt = 0.0F;
 
-            if (m_input->is_key_down(SDL_SCANCODE_W))
+            if (Input::is_key_down(*m_input, SDL_SCANCODE_W))
             {
                 fwd += 1.0F;
             }
-            if (m_input->is_key_down(SDL_SCANCODE_S))
+            if (Input::is_key_down(*m_input, SDL_SCANCODE_S))
             {
                 fwd -= 1.0F;
             }
-            if (m_input->is_key_down(SDL_SCANCODE_D))
+            if (Input::is_key_down(*m_input, SDL_SCANCODE_D))
             {
                 rgt += 1.0F;
             }
-            if (m_input->is_key_down(SDL_SCANCODE_A))
+            if (Input::is_key_down(*m_input, SDL_SCANCODE_A))
             {
                 rgt -= 1.0F;
             }
@@ -237,7 +247,7 @@ void Game::update(double delta_time)
 
         // TEST REMOVE
         {
-            if (m_input->is_key_just_pressed(SDL_SCANCODE_F))
+            if (Input::is_key_down(*m_input, SDL_SCANCODE_F))
             {
                 m_scene.destroy_actor(m_crate_handle, true);
             }

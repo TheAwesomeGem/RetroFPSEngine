@@ -23,7 +23,7 @@ namespace GameWindow
         EventCallback event_callback = nullptr;
     };
 
-    bool create(WindowState* window, Vec2I size);
-    void loop(WindowState* window);
-    void release(WindowState* window);
+    bool create(WindowState& window, Vec2I size);
+    void loop(WindowState& window);
+    void release(WindowState& window);
 }

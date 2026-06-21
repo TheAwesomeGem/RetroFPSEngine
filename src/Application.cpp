@@ -8,10 +8,9 @@
 
 
 Application::Application()
-    : m_renderer{ nullptr }, m_window{  }, m_input{ nullptr }, m_tool{ nullptr }, m_game{ nullptr }
+    : m_renderer{ nullptr }, m_window{  }, m_input{ }, m_tool{ nullptr }, m_game{ nullptr }
 {
     m_renderer = std::make_unique<Renderer>();
-    m_input = std::make_unique<Input>();
     m_tool = std::make_unique<ToolRenderer>();
     m_game = std::make_unique<Game>(m_renderer.get(), m_tool.get());
 }
@@ -20,7 +19,7 @@ void Application::run()
 {
     // App initialization
     {
-        GameWindow::create(&m_window, Vec2I{ .x = 1920, .y = 1080 });
+        GameWindow::create(m_window, Vec2I{ .x = 1920, .y = 1080 });
         m_renderer->init(m_window.hwnd);
 
         // m_window.event_callback = [this](const SDL_Event* event)
@@ -31,11 +30,11 @@ void Application::run()
         // {
         //     m_renderer->on_window_size_change();
         // };
-        m_input->initialize(m_window.window.wnd);
+        Input::create(m_input, m_window);
         auto [device, device_context] = m_renderer->get_tool_context();
         m_tool->init(m_window.window.wnd, device.get(), device_context.get());
 
-        m_game->init(m_input.get());
+        m_game->create(m_input);
     }
     // ==================
 
@@ -49,8 +48,8 @@ void Application::run()
             current_ticks = SDL_GetPerformanceCounter();
             double const delta_time = (double)(current_ticks - prev_ticks) / (double)SDL_GetPerformanceFrequency();
 
-            GameWindow::loop(&m_window);
-            m_input->loop();
+            GameWindow::loop(m_window);
+            Input::loop(m_input);
             m_game->update(delta_time);
             m_game->render();
         }

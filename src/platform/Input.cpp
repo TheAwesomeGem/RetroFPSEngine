@@ -7,29 +7,29 @@
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_mouse.h>
 
-Input::Input()
-    : m_window_raw{ nullptr }, m_keys{}
+void Input::enable_mouse_cursor(const InputState& input, bool is_enabled)
 {
+    SDL_SetWindowRelativeMouseMode(input.window->window.wnd, !is_enabled);
 }
 
-void Input::initialize(SDL_Window* window_raw)
+void Input::create(InputState& input, const GameWindow::WindowState& window)
 {
-    m_window_raw = window_raw;
-    SDL_SetWindowRelativeMouseMode(m_window_raw, true);
+    input.window = &window;
+    SDL_SetWindowRelativeMouseMode(window.window.wnd, true);
 
     int key_count = 0;
     SDL_GetKeyboardState(&key_count);
-    m_keys = std::vector(key_count, KeyState{ .was_being_pressed = false, .is_being_pressed = false });
+    input.keys = std::vector(key_count, KeyState{ .was_being_pressed = false, .is_being_pressed = false });
 }
 
-void Input::loop()
+void Input::loop(InputState& input)
 {
     // handle mouse polling
     {
-        m_mouse.prev_pos = m_mouse.cur_pos;
+        input.mouse.prev_pos = input.mouse.cur_pos;
 
-        SDL_GetRelativeMouseState(&m_mouse.delta.x, &m_mouse.delta.y);
-        SDL_GetMouseState(&m_mouse.cur_pos.x, &m_mouse.cur_pos.y); // TODO: Handle mouse buttons later
+        SDL_GetRelativeMouseState(&input.mouse.delta.x, &input.mouse.delta.y);
+        SDL_GetMouseState(&input.mouse.cur_pos.x, &input.mouse.cur_pos.y); // TODO: Handle mouse buttons later
     }
     // ================
 
@@ -37,16 +37,11 @@ void Input::loop()
     {
         const bool* keys = SDL_GetKeyboardState(nullptr);
 
-        for (size_t i = 0; i < m_keys.size(); ++i)
+        for (size_t i = 0; i < input.keys.size(); ++i)
         {
-            m_keys[i].was_being_pressed = m_keys[i].is_being_pressed;
-            m_keys[i].is_being_pressed = keys[i];
+            input.keys[i].was_being_pressed = input.keys[i].is_being_pressed;
+            input.keys[i].is_being_pressed = keys[i];
         }
     }
     // ================
-}
-
-void Input::enable_mouse_cursor(bool is_enabled)
-{
-    SDL_SetWindowRelativeMouseMode(m_window_raw, !is_enabled);
 }

@@ -29,7 +29,7 @@ private:
 
     GameWindow::WindowState m_window;
     std::unique_ptr<Renderer> m_renderer;
-    std::unique_ptr<Input> m_input;
+    Input::InputState m_input;
     std::unique_ptr<ToolRenderer> m_tool;
     std::unique_ptr<Game> m_game;
 };

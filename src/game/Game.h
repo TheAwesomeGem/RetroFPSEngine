@@ -15,14 +15,14 @@ public:
     NOT_COPYABLE_AND_MOVEABLE(Game);
 
     explicit Game(Renderer* renderer, ToolRenderer* tool);
-    void init(Input* input);
+    void create(Input::InputState& input);
     void update(double delta_time);
     void render();
 
 private:
     Scene m_scene;
     Renderer* m_renderer;
-    Input* m_input;
+    Input::InputState* m_input;
     ToolRenderer* m_tool;
     ActorHandle m_player_handle;
     ActorHandle m_crate_handle;
