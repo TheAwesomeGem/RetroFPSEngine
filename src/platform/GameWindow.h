@@ -1,11 +1,9 @@
 ﻿#pragma once
 
 #include "../Common.h"
-
-#include <functional>
+#include "SDLSystemResource.h"
+#include "SDLWindowResource.h"
 #include <SDL3/SDL.h>
-
-#include "SDLWindowWrapper.h"
 
 namespace GameWindow
 {
@@ -19,7 +17,8 @@ namespace GameWindow
 
         HWND hwnd = nullptr;
         bool should_close = false;
-        SDLWindowWrapper resource = SDLWindowWrapper{};
+        SDLSystemResource sdl = SDLSystemResource{};
+        SDLWindowResource window = SDLWindowResource{};
         SizeCallback size_callback = nullptr;
         EventCallback event_callback = nullptr;
     };

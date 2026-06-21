@@ -9,16 +9,28 @@ bool GameWindow::create(WindowState* window, const Vec2I size)
 {
     release(window);
 
-    auto hwnd = window->resource.create_window("Game Machine", size.x, size.y, SDL_WINDOW_RESIZABLE);
-    if (!hwnd)
+    if (!window->sdl.create())
+    {
+        Log::fatal(LOG_CAT, "Failed to initialize SDL.");
+        return false;
+    }
+
+    SDL_SetHint(SDL_HINT_WINDOWS_GAMEINPUT, "1");
+
+    if (!window->window.create("Game Machine", size.x, size.y, SDL_WINDOW_RESIZABLE))
     {
         Log::fatal(LOG_CAT, "Failed to create SDL Window.");
         return false;
     }
 
-    window->hwnd = *hwnd;
+    const SDL_PropertiesID h_props = SDL_GetWindowProperties(window->window.wnd);
+    window->hwnd = static_cast<HWND>(SDL_GetPointerProperty(h_props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
 
-    Log::info(LOG_CAT, "Constructed GameWindow.");
+    if (window->hwnd == nullptr)
+    {
+        Log::fatal(LOG_CAT, "SDL Failed getting platform handle: {}", SDL_GetError());
+        return false;
+    }
 
     return true;
 }
@@ -60,5 +72,6 @@ void GameWindow::release(WindowState* window)
     Log::info(LOG_CAT, "Releasing GameWindow.");
 
     window->hwnd = nullptr;
-    window->resource.release();
+    window->sdl.release();
+    window->window.release();
 }

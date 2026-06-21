@@ -20,7 +20,8 @@ target_sources(RetroFPSEngine
         src/main.cpp
         src/Application.cpp
         src/Log.cpp
-        src/platform/SDLWindowWrapper.cpp
+        src/platform/SDLSystemResource.cpp
+        src/platform/SDLWindowResource.cpp
         src/platform/GameWindow.cpp
         src/platform/Input.cpp
         src/renderer/RenderDebug.cpp
@@ -48,7 +49,8 @@ target_sources(RetroFPSEngine
         FILES
         src/Application.h
         src/Log.h
-        src/platform/SDLWindowWrapper.h
+        src/platform/SDLSystemResource.h
+        src/platform/SDLWindowResource.h
         src/platform/GameWindow.h
         src/platform/Input.h
         src/renderer/RenderDebug.h

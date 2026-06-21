@@ -31,9 +31,9 @@ void Application::run()
         // {
         //     m_renderer->on_window_size_change();
         // };
-        m_input->initialize(m_window.resource.m_window_raw);
+        m_input->initialize(m_window.window.wnd);
         auto [device, device_context] = m_renderer->get_tool_context();
-        m_tool->init(m_window.resource.m_window_raw, device.get(), device_context.get());
+        m_tool->init(m_window.window.wnd, device.get(), device_context.get());
 
         m_game->init(m_input.get());
     }
