@@ -8,10 +8,9 @@
 
 
 Application::Application()
-    : m_renderer{ nullptr }, m_window{  }, m_input{ }, m_tool{ }, m_game{ nullptr }
+    : m_renderer{ }, m_window{  }, m_input{ }, m_tool{ }, m_game{ nullptr }
 {
-    m_renderer = std::make_unique<Renderer>();
-    m_game = std::make_unique<Game>(m_renderer.get(), m_tool);
+    m_game = std::make_unique<Game>(m_renderer, m_tool);
 }
 
 void Application::run()
@@ -19,7 +18,7 @@ void Application::run()
     // App initialization
     {
         GameWindow::create(m_window, Vec2I{ .x = 1920, .y = 1080 });
-        m_renderer->init(m_window.hwnd);
+        Renderer::create(m_renderer, m_window.hwnd);
 
         // m_window.event_callback = [this](const SDL_Event* event)
         // {
@@ -30,7 +29,7 @@ void Application::run()
         //     m_renderer->on_window_size_change();
         // };
         Input::create(m_input, m_window);
-        auto [device, device_context] = m_renderer->get_tool_context();
+        auto [device, device_context] = Renderer::get_tool_context(m_renderer);
         ToolRenderer::create(m_tool, m_window.window.wnd, device.get(), device_context.get());
 
         m_game->create(m_input);
@@ -56,7 +55,7 @@ void Application::run()
     // ==================
 }
 
-void Application::on_window_size_change(Vec2I /*new_size*/) const
+void Application::on_window_size_change(Vec2I /*new_size*/)
 {
-    m_renderer->on_window_size_change();
+    Renderer::on_window_size_change(m_renderer);
 }

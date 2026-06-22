@@ -25,14 +25,14 @@ void Scene::update(double /*delta_time*/)
 {
 }
 
-void Scene::render(Renderer* renderer)
+void Scene::render(const Renderer::RendererState& renderer)
 {
     Mat4 view_proj_mat = Mat4::Identity;
 
     Actor* camera_actor = get_actor(m_camera_handle);
     if (camera_actor != nullptr)
     {
-        auto [render_width, render_height] = renderer->get_viewport_size();
+        auto [render_width, render_height] = renderer.framebuffer.size;
         Mat4 proj = Mat4Ext::CreatePerspectiveFieldOfViewLH(
             DirectX::XMConvertToRadians(camera_actor->camera->vfov),
             (float)render_width / (float)render_height,
@@ -55,9 +55,9 @@ void Scene::render(Renderer* renderer)
             continue;
         }
 
-        renderer->draw_static_mesh(
+        Renderer::draw_static_mesh(renderer,
             view_proj_mat,
-            StaticMeshDrawData{
+            Renderer::StaticMeshDrawData{
                 .mesh_id = actor.mesh_render->mesh_id,
                 .texture_id = actor.mesh_render->texture_id,
                 .shader_type = actor.mesh_render->shader_type,

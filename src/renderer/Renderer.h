@@ -13,58 +13,53 @@
 #include "TextureHolder.h"
 
 
-struct ViewState
+namespace Renderer
 {
-    Vec3F forward = Vec3F::UnitZ;
-    Mat4 look_at_mat = Mat4::Identity;
-};
-
-struct StaticMeshDrawData
-{
-    uuids::uuid mesh_id = uuids::uuid{};
-    uuids::uuid texture_id = uuids::uuid{};
-    ShaderHolder::ShaderRenderType shader_type = ShaderHolder::ShaderRenderType::textured;
-    Color tint_color = Color{ 1.0F, 1.0F, 1.0F, 1.0F };
-};
-
-// Used for rendering tools
-struct D3DToolContext
-{
-    com_ptr<ID3D11Device2> m_device;
-    com_ptr<ID3D11DeviceContext2> m_context;
-};
-
-class Renderer
-{
-public:
-    NOT_COPYABLE_AND_MOVEABLE(Renderer);
-
-    Renderer();
-    void init(HWND window_handle);
-    void begin_draw();
-    void draw_static_mesh(Mat4 view_proj_mat, const StaticMeshDrawData& mesh_data, Mat4 world_transform);
-    void end_draw();
-    uuids::uuid upload_texture(std::string_view texture_file_name);
-    uuids::uuid upload_mesh(const char* file_path);
-    void on_window_size_change();
-
-    [[nodiscard]] Vec2I get_viewport_size() const
+    struct ViewState
     {
-        return m_framebuffer.size;
-    }
+        Vec3F forward = Vec3F::UnitZ;
+        Mat4 look_at_mat = Mat4::Identity;
+    };
 
-    [[nodiscard]] D3DToolContext get_tool_context() const
+    struct StaticMeshDrawData
     {
-        return D3DToolContext{ .m_device = m_context.device, .m_context = m_context.context };
-    }
+        uuids::uuid mesh_id = uuids::uuid{};
+        uuids::uuid texture_id = uuids::uuid{};
+        ShaderHolder::ShaderRenderType shader_type = ShaderHolder::ShaderRenderType::textured;
+        Color tint_color = Color{ 1.0F, 1.0F, 1.0F, 1.0F };
+    };
 
-private:
-    RenderDebug::DebugState m_debug = RenderDebug::DebugState{};
-    Adapter::AdapterState m_adapter = Adapter::AdapterState{};
-    RenderContext::ContextState m_context = RenderContext::ContextState{};
-    Framebuffer::BufferState m_framebuffer = Framebuffer::BufferState{};
-    RenderGlobalBuffer::BufferState m_globalbuffer = RenderGlobalBuffer::BufferState{};
-    ShaderHolder::HolderState m_shaderholder = ShaderHolder::HolderState{};
-    TextureHolder::HolderState m_textureholder = TextureHolder::HolderState{};
-    MeshHolder::HolderState m_meshholder = MeshHolder::HolderState{};
-};
+    // Used for rendering tools
+    struct D3DToolContext
+    {
+        com_ptr<ID3D11Device2> m_device;
+        com_ptr<ID3D11DeviceContext2> m_context;
+    };
+
+    struct RendererState
+    {
+        NOT_COPYABLE_AND_MOVEABLE(RendererState);
+        RendererState() = default;
+
+        RenderDebug::DebugState debug = RenderDebug::DebugState{};
+        Adapter::AdapterState adapter = Adapter::AdapterState{};
+        RenderContext::ContextState context = RenderContext::ContextState{};
+        Framebuffer::BufferState framebuffer = Framebuffer::BufferState{};
+        RenderGlobalBuffer::BufferState globalbuffer = RenderGlobalBuffer::BufferState{};
+        ShaderHolder::HolderState shaderholder = ShaderHolder::HolderState{};
+        TextureHolder::HolderState textureholder = TextureHolder::HolderState{};
+        MeshHolder::HolderState meshholder = MeshHolder::HolderState{};
+    };
+
+    void create(RendererState& renderer, HWND window_handle);
+    void begin_draw(const RendererState& renderer);
+    void draw_static_mesh(const RendererState& renderer, Mat4 view_proj_mat, const StaticMeshDrawData& mesh_data, Mat4 world_transform);
+    void end_draw(const RendererState& renderer);
+    uuids::uuid upload_texture(RendererState& renderer, std::string_view texture_file_name);
+    uuids::uuid upload_mesh(RendererState& renderer, const char* file_path);
+    void on_window_size_change(RendererState& renderer);
+    [[nodiscard]] inline D3DToolContext get_tool_context(RendererState& renderer)
+    {
+        return D3DToolContext{ .m_device = renderer.context.device, .m_context = renderer.context.context };
+    }
+}

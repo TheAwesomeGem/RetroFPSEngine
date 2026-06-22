@@ -25,10 +25,10 @@ public:
     void run();
 
 private:
-    void on_window_size_change(Vec2I new_size) const;
+    void on_window_size_change(Vec2I new_size);
 
     GameWindow::WindowState m_window;
-    std::unique_ptr<Renderer> m_renderer;
+    Renderer::RendererState m_renderer = {};
     Input::InputState m_input;
     ToolRenderer::ToolState m_tool;
     std::unique_ptr<Game> m_game;

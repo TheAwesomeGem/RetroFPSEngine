@@ -13,14 +13,14 @@ class Game
 public:
     NOT_COPYABLE_AND_MOVEABLE(Game);
 
-    explicit Game(Renderer* renderer, ToolRenderer::ToolState& tool);
+    explicit Game(Renderer::RendererState& renderer, ToolRenderer::ToolState& tool);
     void create(Input::InputState& input);
     void update(const GameWindow::WindowState& window, double delta_time);
     void render();
 
 private:
     Scene m_scene;
-    Renderer* m_renderer;
+    Renderer::RendererState* m_renderer;
     Input::InputState* m_input;
     ToolRenderer::ToolState* m_tool;
     ActorHandle m_player_handle;

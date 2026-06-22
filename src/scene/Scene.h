@@ -210,7 +210,7 @@ public:
 
     void load();
     void update(double delta_time);
-    void render(Renderer* renderer);
+    void render(const Renderer::RendererState& renderer);
     StaticMeshRender create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderHolder::ShaderRenderType shader_type, Color tint_color);
     Camera create_projected_camera(float v_fov, float near_plane, float far_plane);
     ActorHandle spawn_actor(

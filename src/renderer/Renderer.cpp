@@ -15,29 +15,17 @@ using RendererCommon::LOG_CAT;
 
 // TODO: Improve how we interact with constant buffer.
 
-Renderer::Renderer()
-    : m_debug{ },
-      m_adapter{ },
-      m_context{ },
-      m_framebuffer{ },
-      m_globalbuffer{ },
-      m_shaderholder{ },
-      m_textureholder{ },
-      m_meshholder{ }
-{
-}
-
-void Renderer::init(HWND window_handle)
+void Renderer::create(RendererState& renderer, HWND window_handle)
 {
     // Initialize Renderer Components
     {
-        RenderDebug::create(m_debug);
-        Adapter::create(m_adapter, m_debug);
-        RenderContext::create(m_context, m_debug, m_adapter);
-        Framebuffer::create(m_framebuffer, m_debug, m_adapter, m_context, window_handle);
-        RenderGlobalBuffer::create(m_globalbuffer, m_debug, m_context);
-        ShaderHolder::create(m_shaderholder, m_debug, m_context);
-        TextureHolder::create(m_textureholder, m_debug, m_context);
+        RenderDebug::create(renderer.debug);
+        Adapter::create(renderer.adapter, renderer.debug);
+        RenderContext::create(renderer.context, renderer.debug, renderer.adapter);
+        Framebuffer::create(renderer.framebuffer, renderer.debug, renderer.adapter, renderer.context, window_handle);
+        RenderGlobalBuffer::create(renderer.globalbuffer, renderer.debug, renderer.context);
+        ShaderHolder::create(renderer.shaderholder, renderer.debug, renderer.context);
+        TextureHolder::create(renderer.textureholder, renderer.debug, renderer.context);
         MeshHolder::create();
         Log::info(LOG_CAT, "Initialized renderer.");
     }
@@ -45,21 +33,21 @@ void Renderer::init(HWND window_handle)
 
     // Setup initial pipeline
     {
-        RenderContext::setup_initial_pipeline(m_context);
-        Framebuffer::update_size(m_framebuffer, m_debug, m_context);
-        RenderGlobalBuffer::setup_initial_pipeline(m_globalbuffer, m_context);
-        TextureHolder::setup_initial_pipeline(m_textureholder, m_context);
+        RenderContext::setup_initial_pipeline(renderer.context);
+        Framebuffer::update_size(renderer.framebuffer, renderer.debug, renderer.context);
+        RenderGlobalBuffer::setup_initial_pipeline(renderer.globalbuffer,renderer.context);
+        TextureHolder::setup_initial_pipeline(renderer.textureholder, renderer.context);
         Log::info(LOG_CAT, "Setup initial pipeline.");
     }
     // ===================
 }
 
-void Renderer::begin_draw()
+void Renderer::begin_draw(const RendererState& renderer)
 {
-    Framebuffer::clear(m_framebuffer, m_context);
+    Framebuffer::clear(renderer.framebuffer, renderer.context);
 }
 
-void Renderer::draw_static_mesh(const Mat4 view_proj_mat, const StaticMeshDrawData& mesh_data, const Mat4 world_transform)
+void Renderer::draw_static_mesh(const RendererState& renderer, const Mat4 view_proj_mat, const StaticMeshDrawData& mesh_data, const Mat4 world_transform)
 {
     // TODO: Abstract it a bit more so that we don't have to use so much raw context here.
 
@@ -72,9 +60,9 @@ void Renderer::draw_static_mesh(const Mat4 view_proj_mat, const StaticMeshDrawDa
 
         D3D11_MAPPED_SUBRESOURCE drawable_data_resource;
         RenderDebug::check(
-            m_debug,
-            m_context.context->Map(
-                m_globalbuffer.constant_buffer.get(),
+            renderer.debug,
+            renderer.context.context->Map(
+                renderer.globalbuffer.constant_buffer.get(),
                 0,
                 D3D11_MAP_WRITE_DISCARD,
                 0,
@@ -82,16 +70,16 @@ void Renderer::draw_static_mesh(const Mat4 view_proj_mat, const StaticMeshDrawDa
             )
         );
         memcpy(drawable_data_resource.pData, &drawable_data, sizeof(drawable_data));
-        m_context.context->Unmap(m_globalbuffer.constant_buffer.get(), 0);
+        renderer.context.context->Unmap(renderer.globalbuffer.constant_buffer.get(), 0);
     }
     // ===================
 
     // Shader
     {
-        const ShaderHolder::ShaderState& shader = ShaderHolder::get_shader_state(m_shaderholder, (uint8_t)mesh_data.shader_type);
-        m_context.context->IASetInputLayout(shader.input_layout.get());
-        m_context.context->VSSetShader(shader.vertex.get(), nullptr, 0);
-        m_context.context->PSSetShader(shader.pixel.get(), nullptr, 0);
+        const ShaderHolder::ShaderState& shader = ShaderHolder::get_shader_state(renderer.shaderholder, (uint8_t)mesh_data.shader_type);
+        renderer.context.context->IASetInputLayout(shader.input_layout.get());
+        renderer.context.context->VSSetShader(shader.vertex.get(), nullptr, 0);
+        renderer.context.context->PSSetShader(shader.pixel.get(), nullptr, 0);
     }
     // ===================
 
@@ -99,49 +87,49 @@ void Renderer::draw_static_mesh(const Mat4 view_proj_mat, const StaticMeshDrawDa
     {
         if (!mesh_data.texture_id.is_nil())
         {
-            const TextureHolder::GpuTextureData& texture_state = m_textureholder.textures.at(mesh_data.texture_id);
-            m_context.context->PSSetShaderResources(0, 1, texture_state.texture_view.addressof());
+            const TextureHolder::GpuTextureData& texture_state = renderer.textureholder.textures.at(mesh_data.texture_id);
+            renderer.context.context->PSSetShaderResources(0, 1, texture_state.texture_view.addressof());
         }
         else
         {
             ID3D11ShaderResourceView* null_view = nullptr;
-            m_context.context->PSSetShaderResources(0, 1, &null_view);
+            renderer.context.context->PSSetShaderResources(0, 1, &null_view);
         }
     }
     // ===================
 
     // Mesh/Draw
     {
-        const MeshHolder::GpuMeshData& mesh_state = m_meshholder.static_meshes.at(mesh_data.mesh_id); // TODO: Batch them
-        m_context.context->IASetVertexBuffers(
+        const MeshHolder::GpuMeshData& mesh_state = renderer.meshholder.static_meshes.at(mesh_data.mesh_id); // TODO: Batch them
+        renderer.context.context->IASetVertexBuffers(
             0,
             (uint32_t)mesh_state.vertex_buffers.size(),
             mesh_state.vertex_buffers.data()->addressof(),
             mesh_state.strides.data(),
             Common::NO_OFFSETS.data()
         );
-        m_context.context->IASetIndexBuffer(mesh_state.index_buffer.get(), DXGI_FORMAT_R32_UINT, 0);
-        m_context.context->DrawIndexed(mesh_state.index_count, 0, 0);
+        renderer.context.context->IASetIndexBuffer(mesh_state.index_buffer.get(), DXGI_FORMAT_R32_UINT, 0);
+        renderer.context.context->DrawIndexed(mesh_state.index_count, 0, 0);
     }
     // ===================
 }
 
-void Renderer::end_draw()
+void Renderer::end_draw(const RendererState& renderer)
 {
-    Framebuffer::present(m_framebuffer);
+    Framebuffer::present(renderer.framebuffer);
 }
 
-uuids::uuid Renderer::upload_texture(std::string_view texture_file_name)
+uuids::uuid Renderer::upload_texture(RendererState& renderer, std::string_view texture_file_name)
 {
-    return TextureHolder::upload_texture(m_textureholder, m_debug, m_context, texture_file_name);
+    return TextureHolder::upload_texture(renderer.textureholder, renderer.debug, renderer.context, texture_file_name);
 }
 
-uuids::uuid Renderer::upload_mesh(const char* file_path)
+uuids::uuid Renderer::upload_mesh(RendererState& renderer, const char* file_path)
 {
-    return MeshHolder::upload_mesh(m_meshholder, m_debug, m_context, file_path);
+    return MeshHolder::upload_mesh(renderer.meshholder, renderer.debug, renderer.context, file_path);
 }
 
-void Renderer::on_window_size_change()
+void Renderer::on_window_size_change(RendererState& renderer)
 {
-    Framebuffer::update_size(m_framebuffer, m_debug, m_context);
+    Framebuffer::update_size(renderer.framebuffer, renderer.debug, renderer.context);
 }

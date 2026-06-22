@@ -16,9 +16,9 @@
 
 static constexpr const char* LOG_CAT = "Game";
 
-Game::Game(Renderer* renderer, ToolRenderer::ToolState& tool)
+Game::Game(Renderer::RendererState& renderer, ToolRenderer::ToolState& tool)
     : m_scene{},
-      m_renderer{ renderer },
+      m_renderer{ &renderer },
       m_input{ nullptr },
       m_tool{ &tool },
       m_player_handle{ ActorHandle::invalid() },
@@ -32,12 +32,12 @@ void Game::create(Input::InputState& input)
     m_input = &input;
     m_scene.load();
 
-    uuids::uuid cube_mesh_id = m_renderer->upload_mesh("model/cube.obj");
-    uuids::uuid f22_mesh_id = m_renderer->upload_mesh("model/f22.obj");
-    uuids::uuid suzanne_mesh_id = m_renderer->upload_mesh("model/suzanne.obj");
+    uuids::uuid cube_mesh_id = Renderer::upload_mesh(*m_renderer, "model/cube.obj");
+    uuids::uuid f22_mesh_id = Renderer::upload_mesh(*m_renderer, "model/f22.obj");
+    uuids::uuid suzanne_mesh_id = Renderer::upload_mesh(*m_renderer, "model/suzanne.obj");
 
-    uuids::uuid crate_texture_id = m_renderer->upload_texture("texture/crate.png");
-    uuids::uuid uv_test_texture_id = m_renderer->upload_texture("texture/uv_test.png");
+    uuids::uuid crate_texture_id = Renderer::upload_texture(*m_renderer, "texture/crate.png");
+    uuids::uuid uv_test_texture_id = Renderer::upload_texture(*m_renderer, "texture/uv_test.png");
 
     // Hook up tools
     // if (m_tool){
@@ -182,7 +182,7 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
         {
             constexpr float vfov = DirectX::XMConvertToRadians(Config::VFOV);
             constexpr float sensitivity = Config::LOOK_SENSITIVITY;
-            const auto& [viewport_width, viewport_height] = m_renderer->get_viewport_size();
+            const auto& [viewport_width, viewport_height] = m_renderer->framebuffer.size;
             const float aspect = (float)(viewport_width) / (float)(viewport_height);
             const float hfov = 2.0F * atanf(tanf(vfov * 0.5F) * aspect);
             const float yaw_per_px = hfov / (float)(viewport_width);
@@ -260,13 +260,13 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
 
 void Game::render()
 {
-    m_renderer->begin_draw();
-    m_scene.render(m_renderer);
+    Renderer::begin_draw(*m_renderer);
+    m_scene.render(*m_renderer);
     if (m_tool && m_is_tool_shown)
     {
         ToolRenderer::show_scene_heirarchy(*m_tool, m_scene);
         ToolRenderer::show_actor_properties(*m_tool, m_scene);
     }
     ToolRenderer::render();
-    m_renderer->end_draw();
+    Renderer::end_draw(*m_renderer);
 }
