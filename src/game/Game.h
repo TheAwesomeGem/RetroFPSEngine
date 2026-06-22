@@ -19,11 +19,11 @@ public:
     void render();
 
 private:
-    Scene m_scene;
+    Scene::SceneState m_scene = {};
     Renderer::RendererState* m_renderer;
     Input::InputState* m_input;
     ToolRenderer::ToolState* m_tool;
-    ActorHandle m_player_handle;
-    ActorHandle m_crate_handle;
+    Scene::ActorHandle m_player_handle;
+    Scene::ActorHandle m_crate_handle;
     bool m_is_tool_shown;
 };

@@ -21,8 +21,8 @@ Game::Game(Renderer::RendererState& renderer, ToolRenderer::ToolState& tool)
       m_renderer{ &renderer },
       m_input{ nullptr },
       m_tool{ &tool },
-      m_player_handle{ ActorHandle::invalid() },
-      m_crate_handle{ ActorHandle::invalid() },
+      m_player_handle{ Scene::ActorHandle::invalid() },
+      m_crate_handle{ Scene::ActorHandle::invalid() },
       m_is_tool_shown{ false }
 {
 }
@@ -30,7 +30,7 @@ Game::Game(Renderer::RendererState& renderer, ToolRenderer::ToolState& tool)
 void Game::create(Input::InputState& input)
 {
     m_input = &input;
-    m_scene.load();
+    Scene::load(m_scene);
 
     uuids::uuid cube_mesh_id = Renderer::upload_mesh(*m_renderer, "model/cube.obj");
     uuids::uuid f22_mesh_id = Renderer::upload_mesh(*m_renderer, "model/f22.obj");
@@ -118,23 +118,29 @@ void Game::create(Input::InputState& input)
 
     // Spawn actors
     {
-        m_player_handle = m_scene.spawn_actor("Player", Vec3F{ 0.0F, 0.0F, -5.0F });
-        ActorHandle cam_actor_handle = m_scene.spawn_actor("Camera", Vec3F{ 0.0F, 3.0F, 0.0F }, Vec3F::Zero, Vec3F::One, m_player_handle);
-        m_scene.attach_camera(
-            cam_actor_handle, m_scene.create_projected_camera(Config::VFOV, 0.1F, 100.0F)
+        m_player_handle = Scene::spawn_actor(m_scene, "Player", Vec3F{ 0.0F, 0.0F, -5.0F });
+        Scene::ActorHandle cam_actor_handle = Scene::spawn_actor(
+            m_scene, "Camera", Vec3F{ 0.0F, 3.0F, 0.0F }, Vec3F::Zero, Vec3F::One, m_player_handle
         );
-        m_scene.set_camera_actor(cam_actor_handle);
+        Scene::attach_camera(
+            m_scene, cam_actor_handle, Scene::create_projected_camera(Config::VFOV, 0.1F, 100.0F)
+        );
+        m_scene.camera_handle = cam_actor_handle;
 
-        m_crate_handle = m_scene.spawn_actor("Crate", Vec3F{ 0.0F, 0.5F, 2.0F }, Vec3F::Zero, Vec3F{ 0.5F, 0.5F, 0.5F });
-        m_scene.attach_mesh_render(
-            m_crate_handle, m_scene.create_mesh_render(
+        m_crate_handle = Scene::spawn_actor(m_scene, "Crate", Vec3F{ 0.0F, 0.5F, 2.0F }, Vec3F::Zero, Vec3F{ 0.5F, 0.5F, 0.5F });
+        Scene::attach_mesh_render(
+            m_scene,
+            m_crate_handle, Scene::create_mesh_render(
                 suzanne_mesh_id, uv_test_texture_id, ShaderHolder::ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
 
-        ActorHandle floor_handle = m_scene.spawn_actor("Floor", Vec3F{ 0.0F, -1.0F, 0.0F }, Vec3F::Zero, Vec3F{ 50.0F, 1.0F, 50.0F });
-        m_scene.attach_mesh_render(
-            floor_handle, m_scene.create_mesh_render(
+        Scene::ActorHandle floor_handle = Scene::spawn_actor(
+            m_scene, "Floor", Vec3F{ 0.0F, -1.0F, 0.0F }, Vec3F::Zero, Vec3F{ 50.0F, 1.0F, 50.0F }
+        );
+        Scene::attach_mesh_render(
+            m_scene,
+            floor_handle, Scene::create_mesh_render(
                 cube_mesh_id, uuids::uuid{}, ShaderHolder::ShaderRenderType::colored, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
@@ -144,7 +150,7 @@ void Game::create(Input::InputState& input)
 
 void Game::update(const GameWindow::WindowState& window, double delta_time)
 {
-    m_scene.update(delta_time);
+    Scene::update(m_scene, delta_time);
 
     if (m_input == nullptr)
     {
@@ -165,7 +171,7 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
 
     // Crate rotation
     {
-        Actor* crate = m_scene.get_actor(m_crate_handle);
+        Scene::Actor* crate = Scene::get_actor(m_scene, m_crate_handle);
         if (crate != nullptr)
         {
             crate->transform.rot_pitch(45.0F * (float)delta_time);
@@ -174,7 +180,7 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
     }
     // ===============
 
-    Actor* player = m_scene.get_actor(m_player_handle);
+    Scene::Actor* player = Scene::get_actor(m_scene, m_player_handle);
 
     if (player != nullptr && !m_is_tool_shown)
     {
@@ -189,7 +195,7 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
             const float pitch_per_px = vfov / (float)(viewport_height);
             const Vec2F mouse_delta = m_input->mouse.delta;
 
-            Actor* camera = m_scene.get_actor(player->children_handles[0]);
+            Scene::Actor* camera = Scene::get_actor(m_scene, player->children_handles[0]);
 
             if (camera != nullptr)
             {
@@ -249,7 +255,7 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
         {
             if (Input::is_key_down(*m_input, SDL_SCANCODE_F))
             {
-                m_scene.destroy_actor(m_crate_handle, true);
+                Scene::destroy_actor(m_scene, m_crate_handle, true);
             }
         }
         // =================
@@ -261,7 +267,7 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
 void Game::render()
 {
     Renderer::begin_draw(*m_renderer);
-    m_scene.render(*m_renderer);
+    Scene::render(m_scene, *m_renderer);
     if (m_tool && m_is_tool_shown)
     {
         ToolRenderer::show_scene_heirarchy(*m_tool, m_scene);

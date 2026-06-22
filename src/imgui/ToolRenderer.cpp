@@ -40,17 +40,17 @@ static const char* get_shader_type_str(ShaderHolder::ShaderRenderType shader_typ
     }
 }
 
-static const char* get_component_type_str(ComponentType component)
+static const char* get_component_type_str(Scene::ComponentType component)
 {
     switch (component)
     {
-        case ComponentType::transform:
+        case Scene::ComponentType::transform:
             return "Transform";
-        case ComponentType::static_mesh_render:
+        case Scene::ComponentType::static_mesh_render:
             return "Static Mesh Render";
-        case ComponentType::camera:
+        case Scene::ComponentType::camera:
             return "Camera";
-        case ComponentType::count:
+        case Scene::ComponentType::count:
             return "Error";
         default:
             return "Unknown";
@@ -101,14 +101,14 @@ void ToolRenderer::render()
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
-void ToolRenderer::show_actor_properties(const ToolState& tool, Scene& scene)
+void ToolRenderer::show_actor_properties(const ToolState& tool, Scene::SceneState& scene)
 {
     if (!tool.selected_actor_handle.is_valid())
     {
         return;
     }
 
-    Actor* actor = scene.get_actor(tool.selected_actor_handle);
+    Scene::Actor* actor = Scene::get_actor(scene, tool.selected_actor_handle);
 
     if (actor == nullptr)
     {
@@ -189,7 +189,7 @@ void ToolRenderer::show_actor_properties(const ToolState& tool, Scene& scene)
     {
         if (ImGui::BeginCombo("Add Component", ""))
         {
-            for (ComponentType component : actor->missing_components())
+            for (Scene::ComponentType component : actor->missing_components())
             {
                 if (ImGui::Selectable(get_component_type_str(component), false))
                 {
@@ -205,7 +205,7 @@ void ToolRenderer::show_actor_properties(const ToolState& tool, Scene& scene)
 
         if (ImGui::BeginCombo("Delete Component", ""))
         {
-            for (ComponentType component : actor->added_components())
+            for (Scene::ComponentType component : actor->added_components())
             {
                 if (ImGui::Selectable(get_component_type_str(component), false))
                 {
@@ -224,7 +224,7 @@ void ToolRenderer::show_actor_properties(const ToolState& tool, Scene& scene)
     ImGui::End();
 }
 
-void ToolRenderer::show_scene_heirarchy(ToolState& tool, const Scene& scene)
+void ToolRenderer::show_scene_heirarchy(ToolState& tool, const Scene::SceneState& scene)
 {
     ImGui::Begin("Scene Heirarchy");
 
@@ -233,7 +233,7 @@ void ToolRenderer::show_scene_heirarchy(ToolState& tool, const Scene& scene)
         ImGuiTreeNodeFlags flag = ImGuiTreeNodeFlags_DefaultOpen;
         if (ImGui::TreeNodeEx("root", flag))
         {
-            for (const Actor& actor : scene.get_actors())
+            for (const Scene::Actor& actor : scene.actors)
             {
                 if (!actor.is_alive)
                 {
@@ -276,7 +276,7 @@ void ToolRenderer::show_scene_heirarchy(ToolState& tool, const Scene& scene)
     ImGui::End();
 }
 
-void ToolRenderer::show_scene_entry(ToolState& tool, const Scene& scene, const Actor& actor)
+void ToolRenderer::show_scene_entry(ToolState& tool, const Scene::SceneState& scene, const Scene::Actor& actor)
 {
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
@@ -297,9 +297,9 @@ void ToolRenderer::show_scene_entry(ToolState& tool, const Scene& scene, const A
             tool.selected_actor_handle = actor.handle;
         }
 
-        for (ActorHandle child_handle : actor.children_handles)
+        for (Scene::ActorHandle child_handle : actor.children_handles)
         {
-            const Actor* child = scene.get_actor(child_handle);
+            const Scene::Actor* child = Scene::get_actor(scene, child_handle);
 
             if (child == nullptr)
             {

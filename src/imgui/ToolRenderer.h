@@ -12,9 +12,9 @@
 namespace ToolRenderer
 {
     using AddActorCallback = void(*)();
-    using DeleteActorCallback = void(*)(ActorHandle handle);
-    using AddComponentCallback = void(*)(ActorHandle handle, ComponentType component);
-    using DeleteComponentCallback = void(*)(ActorHandle handle, ComponentType component);
+    using DeleteActorCallback = void(*)(Scene::ActorHandle handle);
+    using AddComponentCallback = void(*)(Scene::ActorHandle handle, Scene::ComponentType component);
+    using DeleteComponentCallback = void(*)(Scene::ActorHandle handle, Scene::ComponentType component);
 
     struct ToolState
     {
@@ -22,7 +22,7 @@ namespace ToolRenderer
         ToolState() = default;
 
         ImguiResource imgui = ImguiResource{};
-        ActorHandle selected_actor_handle = ActorHandle {};
+        Scene::ActorHandle selected_actor_handle = Scene::ActorHandle {};
         AddActorCallback add_actor_callback = nullptr;
         DeleteActorCallback delete_actor_callback = nullptr;
         AddComponentCallback add_component_callback = nullptr;
@@ -33,7 +33,7 @@ namespace ToolRenderer
     void on_event(const SDL_Event* event);
     void update();
     void render();
-    void show_actor_properties(const ToolState& tool, Scene& scene);
-    void show_scene_heirarchy(ToolState& tool, const Scene& scene);
-    void show_scene_entry(ToolState& tool, const Scene& scene, const Actor& actor);
+    void show_actor_properties(const ToolState& tool, Scene::SceneState& scene);
+    void show_scene_heirarchy(ToolState& tool, const Scene::SceneState& scene);
+    void show_scene_entry(ToolState& tool, const Scene::SceneState& scene, const Scene::Actor& actor);
 }

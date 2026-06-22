@@ -12,24 +12,19 @@
 #include "src/util/Mat4Ext.h"
 #include "src/util/MathExt.h"
 
-Scene::Scene()
-    : m_actors{}, m_actor_free_indices{}, m_camera_handle{ ActorHandle::invalid() }
+void Scene::load(SceneState& /*scene*/)
 {
 }
 
-void Scene::load()
+void Scene::update(SceneState& /*scene*/, double /*delta_time*/)
 {
 }
 
-void Scene::update(double /*delta_time*/)
-{
-}
-
-void Scene::render(const Renderer::RendererState& renderer)
+void Scene::render(const SceneState& scene, const Renderer::RendererState& renderer)
 {
     Mat4 view_proj_mat = Mat4::Identity;
 
-    Actor* camera_actor = get_actor(m_camera_handle);
+    const Actor* camera_actor = get_actor(scene, scene.camera_handle);
     if (camera_actor != nullptr)
     {
         auto [render_width, render_height] = renderer.framebuffer.size;
@@ -40,12 +35,12 @@ void Scene::render(const Renderer::RendererState& renderer)
             camera_actor->camera->far_plane
         );
 
-        view_proj_mat = get_local_to_world_mat(camera_actor).Invert() * proj;
+        view_proj_mat = get_local_to_world_mat(scene, camera_actor).Invert() * proj;
     }
 
-    for (const Actor& actor : m_actors)
+    for (const Actor& actor : scene.actors)
     {
-        if (!is_actor_exists(actor.handle))
+        if (!is_actor_exists(scene, actor.handle))
         {
             continue;
         }
@@ -63,12 +58,12 @@ void Scene::render(const Renderer::RendererState& renderer)
                 .shader_type = actor.mesh_render->shader_type,
                 .tint_color = actor.mesh_render->tint_color
             },
-            get_local_to_world_mat(&actor)
+            get_local_to_world_mat(scene, &actor)
         );
     }
 }
 
-StaticMeshRender Scene::create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderHolder::ShaderRenderType shader_type, Color tint_color)
+Scene::StaticMeshRender Scene::create_mesh_render(uuids::uuid mesh_id, uuids::uuid texture_id, ShaderHolder::ShaderRenderType shader_type, Color tint_color)
 {
     return StaticMeshRender{
         .mesh_id = mesh_id,
@@ -78,7 +73,7 @@ StaticMeshRender Scene::create_mesh_render(uuids::uuid mesh_id, uuids::uuid text
     };
 }
 
-Camera Scene::create_projected_camera(float v_fov, float near_plane, float far_plane)
+Scene::Camera Scene::create_projected_camera(float v_fov, float near_plane, float far_plane)
 {
     return Camera{
         .vfov = v_fov,
@@ -87,32 +82,32 @@ Camera Scene::create_projected_camera(float v_fov, float near_plane, float far_p
     };
 }
 
-ActorHandle Scene::spawn_actor(std::string name, Vec3F pos, Vec3F rot, Vec3F scale, ActorHandle parent_handle)
+Scene::ActorHandle Scene::spawn_actor(SceneState& scene, std::string name, Vec3F pos, Vec3F rot, Vec3F scale, ActorHandle parent_handle)
 {
     size_t index = 0;
     size_t generation = 0;
     bool should_emplace = false;
-    if (!m_actor_free_indices.empty())
+    if (!scene.actor_free_indices.empty())
     {
-        index = m_actor_free_indices.back();
-        m_actor_free_indices.pop_back();
-        generation = m_actors[index].handle.generation;
+        index = scene.actor_free_indices.back();
+        scene.actor_free_indices.pop_back();
+        generation = scene.actors[index].handle.generation;
     }
     else
     {
-        index = std::size(m_actors);
+        index = std::size(scene.actors);
         should_emplace = true;
     }
 
     ActorHandle handle = ActorHandle{ .index = index, .generation = generation };
-    Actor& actor = should_emplace ? m_actors.emplace_back() : m_actors[index];
+    Actor& actor = should_emplace ? scene.actors.emplace_back() : scene.actors[index];
     actor = Actor{ .handle = handle, .parent_handle = parent_handle, .name = std::move(name), .is_alive = true };
     actor.transform.set_pos(pos);
     actor.transform.set_rot(rot);
     actor.transform.set_scale(scale);
     actor.parent_handle = parent_handle;
 
-    Actor* parent = get_actor(parent_handle);
+    Actor* parent = get_actor(scene, parent_handle);
     if (parent != nullptr)
     {
         parent->children_handles.emplace_back(handle);
@@ -121,9 +116,9 @@ ActorHandle Scene::spawn_actor(std::string name, Vec3F pos, Vec3F rot, Vec3F sca
     return handle;
 }
 
-void Scene::destroy_actor(ActorHandle handle, bool should_destroy_childrens)
+void Scene::destroy_actor(SceneState& scene, ActorHandle handle, bool should_destroy_childrens)
 {
-    Actor* actor = get_actor(handle);
+    Actor* actor = get_actor(scene, handle);
 
     if (actor == nullptr)
     {
@@ -137,7 +132,7 @@ void Scene::destroy_actor(ActorHandle handle, bool should_destroy_childrens)
     {
         for (ActorHandle child_handle : actor->children_handles)
         {
-            Actor* child = get_actor(child_handle);
+            Actor* child = get_actor(scene, child_handle);
 
             if (child == nullptr)
             {
@@ -148,7 +143,7 @@ void Scene::destroy_actor(ActorHandle handle, bool should_destroy_childrens)
 
             if (should_destroy_childrens)
             {
-                destroy_actor(child_handle, true);
+                destroy_actor(scene, child_handle, true);
             }
         }
 
@@ -158,7 +153,7 @@ void Scene::destroy_actor(ActorHandle handle, bool should_destroy_childrens)
 
     // Deattch from parent
     {
-        Actor* parent = get_actor(actor->parent_handle);
+        Actor* parent = get_actor(scene, actor->parent_handle);
 
         if (parent != nullptr)
         {
@@ -183,10 +178,10 @@ void Scene::destroy_actor(ActorHandle handle, bool should_destroy_childrens)
     }
     // ===================
 
-    m_actor_free_indices.emplace_back(actor->handle.index);
+    scene.actor_free_indices.emplace_back(actor->handle.index);
 }
 
-Mat4 Scene::get_local_to_world_mat(const Actor* actor) const
+Mat4 Scene::get_local_to_world_mat(const SceneState& scene, const Actor* actor)
 {
     assert(actor != nullptr);
 
@@ -194,7 +189,7 @@ Mat4 Scene::get_local_to_world_mat(const Actor* actor) const
     ActorHandle next_parent_handle = actor->parent_handle;
 
     const Actor* next_parent = nullptr;
-    while ((next_parent = get_actor(next_parent_handle)) != nullptr)
+    while ((next_parent = get_actor(scene, next_parent_handle)) != nullptr)
     {
         final_mat = final_mat * next_parent->transform.get_mat();
         next_parent_handle = next_parent->parent_handle;
