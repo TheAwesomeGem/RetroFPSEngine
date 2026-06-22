@@ -6,32 +6,26 @@
 
 #include "util/RandomExt.h"
 
-
-Application::Application()
-    : m_renderer{ }, m_window{  }, m_input{ }, m_tool{ }, m_game{ }
-{
-}
-
-void Application::run()
+void Application::run(AppState& app)
 {
     // App initialization
     {
-        GameWindow::create(m_window, Vec2I{ .x = 1920, .y = 1080 });
-        Renderer::create(m_renderer, m_window.hwnd);
+        GameWindow::create(app.window, Vec2I{ .x = 1920, .y = 1080 });
+        Renderer::create(app.renderer, app.window.hwnd);
 
-        // m_window.event_callback = [this](const SDL_Event* event)
-        // {
-        //     m_tool->on_event(event);
-        // };
-        // m_window.size_callback = [this](Vec2I /*size*/)
-        // {
-        //     m_renderer->on_window_size_change();
-        // };
-        Input::create(m_input, m_window);
-        auto [device, device_context] = Renderer::get_tool_context(m_renderer);
-        ToolRenderer::create(m_tool, m_window.window.wnd, device.get(), device_context.get());
+        app.window.event_callback = [](const SDL_Event* event)
+        {
+            ToolRenderer::on_event(event);
+        };
+        app.window.size_callback = [](void* receiver, Vec2I /*size*/)
+        {
+            Renderer::on_window_size_change(((AppState*)receiver)->renderer);
+        };
+        Input::create(app.input, app.window);
+        auto [device, device_context] = Renderer::get_tool_context(app.renderer);
+        ToolRenderer::create(app.tool, app.window.window.wnd, device.get(), device_context.get());
 
-        Game::create(m_game, m_renderer, m_input, m_tool);
+        Game::create(app.game, app.renderer, app.input, app.tool);
     }
     // ==================
 
@@ -39,22 +33,17 @@ void Application::run()
     {
         uint64_t prev_ticks = 0;
         uint64_t current_ticks = SDL_GetPerformanceCounter();
-        while (!m_window.should_close)
+        while (!app.window.should_close)
         {
             prev_ticks = current_ticks;
             current_ticks = SDL_GetPerformanceCounter();
             double const delta_time = (double)(current_ticks - prev_ticks) / (double)SDL_GetPerformanceFrequency();
 
-            GameWindow::loop(m_window);
-            Input::loop(m_input);
-            Game::update(m_game, m_window, delta_time);
-            Game::render(m_game);
+            GameWindow::loop(app.window, &app);
+            Input::loop(app.input);
+            Game::update(app.game, app.window, delta_time);
+            Game::render(app.game);
         }
     }
     // ==================
-}
-
-void Application::on_window_size_change(Vec2I /*new_size*/)
-{
-    Renderer::on_window_size_change(m_renderer);
 }

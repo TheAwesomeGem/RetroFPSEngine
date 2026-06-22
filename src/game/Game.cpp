@@ -31,8 +31,8 @@ void Game::create(GameState& game, Renderer::RendererState& renderer, Input::Inp
     uuids::uuid uv_test_texture_id = Renderer::upload_texture(*game.renderer, "texture/uv_test.png");
 
     // Hook up tools
-    // if (m_tool){
-    //     m_tool->m_add_actor_callback = [this]()
+    // if (game.tool){
+    //     game.tool->add_actor_callback = []()
     //     {
     //         m_scene.spawn_actor(std::format("Actor {}", RandomExt::range(0, 99999)));
     //     };

@@ -14,22 +14,22 @@
 
 /**
  * TODOs
+ * TODO: Switched to an event queue type model instead of callbacks to handle ToolRenderer code inside Game
  * TODO: Add model loading capabilities maybe with Assimport
  */
-class Application
+namespace Application
 {
-public:
-    NOT_COPYABLE_AND_MOVEABLE(Application);
+    struct AppState
+    {
+        NOT_COPYABLE_AND_MOVEABLE(AppState);
+        AppState() = default;
 
-    Application();
-    void run();
+        GameWindow::WindowState window = {};
+        Renderer::RendererState renderer = {};
+        Input::InputState input = {};
+        ToolRenderer::ToolState tool = {};
+        Game::GameState game = {};
+    };
 
-private:
-    void on_window_size_change(Vec2I new_size);
-
-    GameWindow::WindowState m_window = {};
-    Renderer::RendererState m_renderer = {};
-    Input::InputState m_input = {};
-    ToolRenderer::ToolState m_tool = {};
-    Game::GameState m_game = {};
-};
+    void run(AppState& app);
+}

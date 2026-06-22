@@ -5,10 +5,8 @@ int main()
 {
     Log::init();
 
-    Application* app = new Application();
-    app->run();
-
-    delete app;
+    Application::AppState app = {};
+    Application::run(app);
 
     return 0;
 }

@@ -7,7 +7,7 @@
 
 namespace GameWindow
 {
-    using SizeCallback = void(*)(Vec2I);
+    using SizeCallback = void(*)(void* receiver, Vec2I);
     using EventCallback = void(*)(const SDL_Event* event);
 
     struct WindowState
@@ -24,6 +24,6 @@ namespace GameWindow
     };
 
     bool create(WindowState& window, Vec2I size);
-    void loop(WindowState& window);
+    void loop(WindowState& window, void* callback_receiver);
     void release(WindowState& window);
 }
