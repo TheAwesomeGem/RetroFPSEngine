@@ -23,89 +23,12 @@ void Game::create(GameState& game, Renderer::RendererState& renderer, Input::Inp
     game.input = &input;
     Scene::load(game.scene);
 
-    uuids::uuid cube_mesh_id = Renderer::upload_mesh(*game.renderer, "model/cube.obj");
-    uuids::uuid f22_mesh_id = Renderer::upload_mesh(*game.renderer, "model/f22.obj");
-    uuids::uuid suzanne_mesh_id = Renderer::upload_mesh(*game.renderer, "model/suzanne.obj");
+    game.cube_mesh_id = Renderer::upload_mesh(*game.renderer, "model/cube.obj");
+    game.f22_mesh_id = Renderer::upload_mesh(*game.renderer, "model/f22.obj");
+    game.suzanne_mesh_id = Renderer::upload_mesh(*game.renderer, "model/suzanne.obj");
 
-    uuids::uuid crate_texture_id = Renderer::upload_texture(*game.renderer, "texture/crate.png");
-    uuids::uuid uv_test_texture_id = Renderer::upload_texture(*game.renderer, "texture/uv_test.png");
-
-    // Hook up tools
-    // if (game.tool){
-    //     game.tool->add_actor_callback = []()
-    //     {
-    //         m_scene.spawn_actor(std::format("Actor {}", RandomExt::range(0, 99999)));
-    //     };
-    //
-    //     m_tool->m_delete_actor_callback = [this](ActorHandle handle)
-    //     {
-    //         m_scene.destroy_actor(handle, true);
-    //     };
-    //
-    //     m_tool->m_add_component_callback = [this, cube_mesh_id, crate_texture_id](ActorHandle handle, ComponentType component)
-    //     {
-    //         Actor* actor = m_scene.get_actor(handle);
-    //
-    //         if (actor == nullptr)
-    //         {
-    //             return;
-    //         }
-    //
-    //         switch (component)
-    //         {
-    //             case ComponentType::static_mesh_render:
-    //             {
-    //                 m_scene.attach_mesh_render(
-    //                     actor->handle, m_scene.create_mesh_render(
-    //                         cube_mesh_id, crate_texture_id, ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
-    //                     )
-    //                 );
-    //                 break;
-    //             }
-    //             case ComponentType::camera:
-    //             {
-    //                 m_scene.attach_camera(actor->handle, m_scene.create_projected_camera(Config::VFOV, 0.1F, 100.0F));
-    //                 break;
-    //             }
-    //             case ComponentType::transform:
-    //             case ComponentType::count:
-    //             default:
-    //             {
-    //                 break;
-    //             }
-    //         }
-    //     };
-    //
-    //     m_tool->m_delete_component_callback = [this](ActorHandle handle, ComponentType component)
-    //     {
-    //         Actor* actor = m_scene.get_actor(handle);
-    //
-    //         if (actor == nullptr)
-    //         {
-    //             return;
-    //         }
-    //
-    //         switch (component)
-    //         {
-    //             case ComponentType::static_mesh_render:
-    //             {
-    //                 actor->mesh_render = std::nullopt;
-    //                 break;
-    //             }
-    //             case ComponentType::camera:
-    //             {
-    //                 actor->camera = std::nullopt;
-    //                 break;
-    //             }
-    //             case ComponentType::transform:
-    //             case ComponentType::count:
-    //             default:
-    //             {
-    //                 break;
-    //             }
-    //         }
-    //     };
-    // }
+    game.crate_texture_id = Renderer::upload_texture(*game.renderer, "texture/crate.png");
+    game.uv_test_texture_id = Renderer::upload_texture(*game.renderer, "texture/uv_test.png");
 
     // Spawn actors
     {
@@ -122,7 +45,7 @@ void Game::create(GameState& game, Renderer::RendererState& renderer, Input::Inp
         Scene::attach_mesh_render(
             game.scene,
             game.crate_handle, Scene::create_mesh_render(
-                suzanne_mesh_id, uv_test_texture_id, ShaderHolder::ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
+                game.suzanne_mesh_id, game.uv_test_texture_id, ShaderHolder::ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
 
@@ -132,7 +55,7 @@ void Game::create(GameState& game, Renderer::RendererState& renderer, Input::Inp
         Scene::attach_mesh_render(
             game.scene,
             floor_handle, Scene::create_mesh_render(
-                cube_mesh_id, uuids::uuid{}, ShaderHolder::ShaderRenderType::colored, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
+                game.cube_mesh_id, uuids::uuid{}, ShaderHolder::ShaderRenderType::colored, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
     }
@@ -253,6 +176,99 @@ void Game::update(GameState& game, const GameWindow::WindowState& window, double
     }
 
     ToolRenderer::update();
+
+    // Handle tool events
+    if (game.tool)
+    {
+        for (const ToolRenderer::ToolEvent& event : game.tool->pending_events)
+        {
+            switch (event.type)
+            {
+                case ToolRenderer::ToolEvent::Type::AddActor:
+                {
+                    Scene::spawn_actor(game.scene, std::format("Actor {}", RandomExt::range(0, 99999)));
+                    break;
+                }
+                case ToolRenderer::ToolEvent::Type::DeleteActor:
+                {
+                    Scene::destroy_actor(game.scene, event.actor_data.handle, true);
+                    break;
+                }
+                case ToolRenderer::ToolEvent::Type::AddComponent:
+                {
+                    Scene::Actor* actor = Scene::get_actor(game.scene, event.actor_component_data.handle);
+
+                    if (actor == nullptr)
+                    {
+                        return;
+                    }
+
+                    switch (event.actor_component_data.component)
+                    {
+                        case Scene::ComponentType::static_mesh_render:
+                        {
+                            Scene::attach_mesh_render(
+                                game.scene, actor->handle, Scene::create_mesh_render(
+                                    game.cube_mesh_id, game.crate_texture_id, ShaderHolder::ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
+                                )
+                            );
+                            break;
+                        }
+                        case Scene::ComponentType::camera:
+                        {
+                            Scene::attach_camera(game.scene, actor->handle, Scene::create_projected_camera(Config::VFOV, 0.1F, 100.0F));
+                            break;
+                        }
+                        case Scene::ComponentType::transform:
+                        case Scene::ComponentType::count:
+                        default:
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case ToolRenderer::ToolEvent::Type::DeleteComponent:
+                {
+                    Scene::Actor* actor = Scene::get_actor(game.scene, event.actor_component_data.handle);
+
+                    if (actor == nullptr)
+                    {
+                        return;
+                    }
+
+                    switch (event.actor_component_data.component)
+                    {
+                        case Scene::ComponentType::static_mesh_render:
+                        {
+                            actor->mesh_render = std::nullopt;
+                            break;
+                        }
+                        case Scene::ComponentType::camera:
+                        {
+                            actor->camera = std::nullopt;
+                            break;
+                        }
+                        case Scene::ComponentType::transform:
+                        case Scene::ComponentType::count:
+                        default:
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case ToolRenderer::ToolEvent::Type::Unknown:
+                {
+                    // nothing to do
+
+                    break;
+                }
+            }
+        }
+
+        game.tool->pending_events.clear();
+    }
 }
 
 void Game::render(GameState& game)

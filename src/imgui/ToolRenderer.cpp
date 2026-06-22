@@ -80,6 +80,8 @@ static void show_readonly_input_box(const char* label, const std::string& value)
 
 bool ToolRenderer::create(ToolState& tool, SDL_Window* window, ID3D11Device2* device, ID3D11DeviceContext2* device_context)
 {
+    tool.pending_events.reserve(32);
+
     return tool.imgui.create(window, device, device_context);
 }
 
@@ -101,7 +103,7 @@ void ToolRenderer::render()
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
-void ToolRenderer::show_actor_properties(const ToolState& tool, Scene::SceneState& scene)
+void ToolRenderer::show_actor_properties(ToolState& tool, Scene::SceneState& scene)
 {
     if (!tool.selected_actor_handle.is_valid())
     {
@@ -193,10 +195,7 @@ void ToolRenderer::show_actor_properties(const ToolState& tool, Scene::SceneStat
             {
                 if (ImGui::Selectable(get_component_type_str(component), false))
                 {
-                    if (tool.add_component_callback != nullptr)
-                    {
-                        tool.add_component_callback(actor->handle, component);
-                    }
+                    tool.pending_events.emplace_back(ToolEvent::add_component(actor->handle, component));
                 }
             }
 
@@ -209,10 +208,7 @@ void ToolRenderer::show_actor_properties(const ToolState& tool, Scene::SceneStat
             {
                 if (ImGui::Selectable(get_component_type_str(component), false))
                 {
-                    if (tool.delete_component_callback != nullptr)
-                    {
-                        tool.delete_component_callback(actor->handle, component);
-                    }
+                    tool.pending_events.emplace_back(ToolEvent::delete_component(actor->handle, component));
                 }
             }
 
@@ -258,17 +254,14 @@ void ToolRenderer::show_scene_heirarchy(ToolState& tool, const Scene::SceneState
 
         if (ImGui::Button("Add Actor"))
         {
-            if (tool.add_actor_callback != nullptr)
-            {
-                tool.add_actor_callback();
-            }
+            tool.pending_events.emplace_back(ToolEvent::add_actor());
         }
 
         if (ImGui::Button("Delete Actor"))
         {
-            if (tool.selected_actor_handle.is_valid() && tool.delete_actor_callback != nullptr)
+            if (tool.selected_actor_handle.is_valid())
             {
-                tool.delete_actor_callback(tool.selected_actor_handle);
+                tool.pending_events.emplace_back(ToolEvent::delete_actor(tool.selected_actor_handle));
             }
         }
     }

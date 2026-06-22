@@ -4,23 +4,19 @@
 
 #include "Application.h"
 
+#include "Log.h"
 #include "util/RandomExt.h"
+
+static constexpr const char* LOG_CAT = "App";
 
 void Application::run(AppState& app)
 {
+    app.window_events.reserve(32);
+
     // App initialization
     {
         GameWindow::create(app.window, Vec2I{ .x = 1920, .y = 1080 });
         Renderer::create(app.renderer, app.window.hwnd);
-
-        app.window.event_callback = [](const SDL_Event* event)
-        {
-            ToolRenderer::on_event(event);
-        };
-        app.window.size_callback = [](void* receiver, Vec2I /*size*/)
-        {
-            Renderer::on_window_size_change(((AppState*)receiver)->renderer);
-        };
         Input::create(app.input, app.window);
         auto [device, device_context] = Renderer::get_tool_context(app.renderer);
         ToolRenderer::create(app.tool, app.window.window.wnd, device.get(), device_context.get());
@@ -39,10 +35,36 @@ void Application::run(AppState& app)
             current_ticks = SDL_GetPerformanceCounter();
             double const delta_time = (double)(current_ticks - prev_ticks) / (double)SDL_GetPerformanceFrequency();
 
-            GameWindow::loop(app.window, &app);
+            GameWindow::loop(app.window, app.window_events);
             Input::loop(app.input);
             Game::update(app.game, app.window, delta_time);
             Game::render(app.game);
+
+            for (const GameWindow::WindowEvent& event : app.window_events)
+            {
+                switch (event.type)
+                {
+                    case GameWindow::WindowEvent::Type::Event:
+                    {
+                        ToolRenderer::on_event(&event.event);
+
+                        break;
+                    }
+                    case GameWindow::WindowEvent::Type::Size:
+                    {
+                        Renderer::on_window_size_change(app.renderer);
+
+                        break;
+                    }
+                    case GameWindow::WindowEvent::Type::Unknown:
+                    {
+                        // do nothing
+                        break;
+                    }
+                }
+            }
+
+            app.window_events.clear();
         }
     }
     // ==================

@@ -29,6 +29,7 @@ namespace Application
         Input::InputState input = {};
         ToolRenderer::ToolState tool = {};
         Game::GameState game = {};
+        std::vector<GameWindow::WindowEvent> window_events = {};
     };
 
     void run(AppState& app);

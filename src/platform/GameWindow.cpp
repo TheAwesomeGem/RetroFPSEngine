@@ -35,15 +35,12 @@ bool GameWindow::create(WindowState& window, const Vec2I size)
     return true;
 }
 
-void GameWindow::loop(WindowState& window, void* callback_receiver)
+void GameWindow::loop(WindowState& window, std::vector<WindowEvent>& events)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        if (window.event_callback)
-        {
-            window.event_callback(&event);
-        }
+        events.emplace_back(WindowEvent::sdl_event(event));
 
         switch (event.type)
         {
@@ -57,10 +54,7 @@ void GameWindow::loop(WindowState& window, void* callback_receiver)
             {
                 const int width = event.window.data1;
                 const int height = event.window.data2;
-                if (window.size_callback)
-                {
-                    window.size_callback(callback_receiver,  Vec2I{ .x = width, .y = height });
-                }
+                events.emplace_back(WindowEvent::resized(Vec2I{width, height}));
                 break;
             }
         }

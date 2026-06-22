@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <deque>
+
 #include "../Common.h"
 #include "SDLSystemResource.h"
 #include "SDLWindowResource.h"
@@ -7,8 +9,38 @@
 
 namespace GameWindow
 {
-    using SizeCallback = void(*)(void* receiver, Vec2I);
-    using EventCallback = void(*)(const SDL_Event* event);
+    struct WindowEvent
+    {
+        enum class Type
+        {
+            Event,
+            Size,
+            Unknown
+        };
+
+        Type type = Type::Unknown;
+        union
+        {
+            SDL_Event event;
+            Vec2I size;
+        };
+
+        static WindowEvent sdl_event(const SDL_Event& event)
+        {
+            WindowEvent e = {};
+            e.type = Type::Event;
+            e.event = event;
+            return e;
+        }
+
+        static WindowEvent resized(Vec2I new_size)
+        {
+            WindowEvent e = {};
+            e.type = Type::Size;
+            e.size = new_size;
+            return e;
+        }
+    };
 
     struct WindowState
     {
@@ -19,11 +51,9 @@ namespace GameWindow
         bool should_close = false;
         SDLSystemResource sdl = SDLSystemResource{};
         SDLWindowResource window = SDLWindowResource{};
-        SizeCallback size_callback = nullptr;
-        EventCallback event_callback = nullptr;
     };
 
     bool create(WindowState& window, Vec2I size);
-    void loop(WindowState& window, void* callback_receiver);
+    void loop(WindowState& window, std::vector<WindowEvent>& events);
     void release(WindowState& window);
 }

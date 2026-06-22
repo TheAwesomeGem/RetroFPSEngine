@@ -22,6 +22,11 @@ namespace Game
         Scene::ActorHandle player_handle = Scene::ActorHandle::invalid();
         Scene::ActorHandle crate_handle = Scene::ActorHandle::invalid();
         bool is_tool_shown = false;
+        uuids::uuid cube_mesh_id = {};
+        uuids::uuid f22_mesh_id = {};
+        uuids::uuid suzanne_mesh_id = {};
+        uuids::uuid crate_texture_id = {};
+        uuids::uuid uv_test_texture_id = {};
     };
 
     void create(GameState& game, Renderer::RendererState& renderer, Input::InputState& input, ToolRenderer::ToolState& tool);
