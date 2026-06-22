@@ -8,9 +8,8 @@
 
 
 Application::Application()
-    : m_renderer{ }, m_window{  }, m_input{ }, m_tool{ }, m_game{ nullptr }
+    : m_renderer{ }, m_window{  }, m_input{ }, m_tool{ }, m_game{ }
 {
-    m_game = std::make_unique<Game>(m_renderer, m_tool);
 }
 
 void Application::run()
@@ -32,7 +31,7 @@ void Application::run()
         auto [device, device_context] = Renderer::get_tool_context(m_renderer);
         ToolRenderer::create(m_tool, m_window.window.wnd, device.get(), device_context.get());
 
-        m_game->create(m_input);
+        Game::create(m_game, m_renderer, m_input, m_tool);
     }
     // ==================
 
@@ -48,8 +47,8 @@ void Application::run()
 
             GameWindow::loop(m_window);
             Input::loop(m_input);
-            m_game->update(m_window, delta_time);
-            m_game->render();
+            Game::update(m_game, m_window, delta_time);
+            Game::render(m_game);
         }
     }
     // ==================

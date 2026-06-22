@@ -8,22 +8,23 @@
 
 #include "src/scene/Scene.h"
 
-class Game
+namespace Game
 {
-public:
-    NOT_COPYABLE_AND_MOVEABLE(Game);
+    struct GameState
+    {
+        NOT_COPYABLE_AND_MOVEABLE(GameState);
+        GameState() = default;
 
-    explicit Game(Renderer::RendererState& renderer, ToolRenderer::ToolState& tool);
-    void create(Input::InputState& input);
-    void update(const GameWindow::WindowState& window, double delta_time);
-    void render();
+        Scene::SceneState scene = {};
+        Renderer::RendererState* renderer = nullptr;
+        Input::InputState* input = nullptr;
+        ToolRenderer::ToolState* tool = nullptr;
+        Scene::ActorHandle player_handle = Scene::ActorHandle::invalid();
+        Scene::ActorHandle crate_handle = Scene::ActorHandle::invalid();
+        bool is_tool_shown = false;
+    };
 
-private:
-    Scene::SceneState m_scene = {};
-    Renderer::RendererState* m_renderer;
-    Input::InputState* m_input;
-    ToolRenderer::ToolState* m_tool;
-    Scene::ActorHandle m_player_handle;
-    Scene::ActorHandle m_crate_handle;
-    bool m_is_tool_shown;
-};
+    void create(GameState& game, Renderer::RendererState& renderer, Input::InputState& input, ToolRenderer::ToolState& tool);
+    void update(GameState& game, const GameWindow::WindowState& window, double delta_time);
+    void render(GameState& game);
+}

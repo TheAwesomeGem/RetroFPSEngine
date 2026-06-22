@@ -16,28 +16,19 @@
 
 static constexpr const char* LOG_CAT = "Game";
 
-Game::Game(Renderer::RendererState& renderer, ToolRenderer::ToolState& tool)
-    : m_scene{},
-      m_renderer{ &renderer },
-      m_input{ nullptr },
-      m_tool{ &tool },
-      m_player_handle{ Scene::ActorHandle::invalid() },
-      m_crate_handle{ Scene::ActorHandle::invalid() },
-      m_is_tool_shown{ false }
+void Game::create(GameState& game, Renderer::RendererState& renderer, Input::InputState& input, ToolRenderer::ToolState& tool)
 {
-}
+    game.renderer = &renderer;
+    game.tool = &tool;
+    game.input = &input;
+    Scene::load(game.scene);
 
-void Game::create(Input::InputState& input)
-{
-    m_input = &input;
-    Scene::load(m_scene);
+    uuids::uuid cube_mesh_id = Renderer::upload_mesh(*game.renderer, "model/cube.obj");
+    uuids::uuid f22_mesh_id = Renderer::upload_mesh(*game.renderer, "model/f22.obj");
+    uuids::uuid suzanne_mesh_id = Renderer::upload_mesh(*game.renderer, "model/suzanne.obj");
 
-    uuids::uuid cube_mesh_id = Renderer::upload_mesh(*m_renderer, "model/cube.obj");
-    uuids::uuid f22_mesh_id = Renderer::upload_mesh(*m_renderer, "model/f22.obj");
-    uuids::uuid suzanne_mesh_id = Renderer::upload_mesh(*m_renderer, "model/suzanne.obj");
-
-    uuids::uuid crate_texture_id = Renderer::upload_texture(*m_renderer, "texture/crate.png");
-    uuids::uuid uv_test_texture_id = Renderer::upload_texture(*m_renderer, "texture/uv_test.png");
+    uuids::uuid crate_texture_id = Renderer::upload_texture(*game.renderer, "texture/crate.png");
+    uuids::uuid uv_test_texture_id = Renderer::upload_texture(*game.renderer, "texture/uv_test.png");
 
     // Hook up tools
     // if (m_tool){
@@ -118,28 +109,28 @@ void Game::create(Input::InputState& input)
 
     // Spawn actors
     {
-        m_player_handle = Scene::spawn_actor(m_scene, "Player", Vec3F{ 0.0F, 0.0F, -5.0F });
+        game.player_handle = Scene::spawn_actor(game.scene, "Player", Vec3F{ 0.0F, 0.0F, -5.0F });
         Scene::ActorHandle cam_actor_handle = Scene::spawn_actor(
-            m_scene, "Camera", Vec3F{ 0.0F, 3.0F, 0.0F }, Vec3F::Zero, Vec3F::One, m_player_handle
+            game.scene, "Camera", Vec3F{ 0.0F, 3.0F, 0.0F }, Vec3F::Zero, Vec3F::One, game.player_handle
         );
         Scene::attach_camera(
-            m_scene, cam_actor_handle, Scene::create_projected_camera(Config::VFOV, 0.1F, 100.0F)
+            game.scene, cam_actor_handle, Scene::create_projected_camera(Config::VFOV, 0.1F, 100.0F)
         );
-        m_scene.camera_handle = cam_actor_handle;
+        game.scene.camera_handle = cam_actor_handle;
 
-        m_crate_handle = Scene::spawn_actor(m_scene, "Crate", Vec3F{ 0.0F, 0.5F, 2.0F }, Vec3F::Zero, Vec3F{ 0.5F, 0.5F, 0.5F });
+        game.crate_handle = Scene::spawn_actor(game.scene, "Crate", Vec3F{ 0.0F, 0.5F, 2.0F }, Vec3F::Zero, Vec3F{ 0.5F, 0.5F, 0.5F });
         Scene::attach_mesh_render(
-            m_scene,
-            m_crate_handle, Scene::create_mesh_render(
+            game.scene,
+            game.crate_handle, Scene::create_mesh_render(
                 suzanne_mesh_id, uv_test_texture_id, ShaderHolder::ShaderRenderType::textured, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
         );
 
         Scene::ActorHandle floor_handle = Scene::spawn_actor(
-            m_scene, "Floor", Vec3F{ 0.0F, -1.0F, 0.0F }, Vec3F::Zero, Vec3F{ 50.0F, 1.0F, 50.0F }
+            game.scene, "Floor", Vec3F{ 0.0F, -1.0F, 0.0F }, Vec3F::Zero, Vec3F{ 50.0F, 1.0F, 50.0F }
         );
         Scene::attach_mesh_render(
-            m_scene,
+            game.scene,
             floor_handle, Scene::create_mesh_render(
                 cube_mesh_id, uuids::uuid{}, ShaderHolder::ShaderRenderType::colored, Color{ 1.0F, 1.0F, 1.0F, 1.0F }
             )
@@ -148,11 +139,11 @@ void Game::create(Input::InputState& input)
     // ================
 }
 
-void Game::update(const GameWindow::WindowState& window, double delta_time)
+void Game::update(GameState& game, const GameWindow::WindowState& window, double delta_time)
 {
-    Scene::update(m_scene, delta_time);
+    Scene::update(game.scene, delta_time);
 
-    if (m_input == nullptr)
+    if (game.input == nullptr)
     {
         Log::warn(LOG_CAT, "Input subsystem is not ready yet");
 
@@ -161,17 +152,17 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
 
     // Tooling Controls
     {
-        if (Input::is_key_just_pressed(*m_input, SDL_SCANCODE_ESCAPE))
+        if (Input::is_key_just_pressed(*game.input, SDL_SCANCODE_ESCAPE))
         {
-            m_is_tool_shown = !m_is_tool_shown;
-            Input::enable_mouse_cursor(window, m_is_tool_shown);
+            game.is_tool_shown = !game.is_tool_shown;
+            Input::enable_mouse_cursor(window, game.is_tool_shown);
         }
     }
     // ===============
 
     // Crate rotation
     {
-        Scene::Actor* crate = Scene::get_actor(m_scene, m_crate_handle);
+        Scene::Actor* crate = Scene::get_actor(game.scene, game.crate_handle);
         if (crate != nullptr)
         {
             crate->transform.rot_pitch(45.0F * (float)delta_time);
@@ -180,22 +171,22 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
     }
     // ===============
 
-    Scene::Actor* player = Scene::get_actor(m_scene, m_player_handle);
+    Scene::Actor* player = Scene::get_actor(game.scene, game.player_handle);
 
-    if (player != nullptr && !m_is_tool_shown)
+    if (player != nullptr && !game.is_tool_shown)
     {
         // Player/Camera Rotation
         {
             constexpr float vfov = DirectX::XMConvertToRadians(Config::VFOV);
             constexpr float sensitivity = Config::LOOK_SENSITIVITY;
-            const auto& [viewport_width, viewport_height] = m_renderer->framebuffer.size;
+            const auto& [viewport_width, viewport_height] = game.renderer->framebuffer.size;
             const float aspect = (float)(viewport_width) / (float)(viewport_height);
             const float hfov = 2.0F * atanf(tanf(vfov * 0.5F) * aspect);
             const float yaw_per_px = hfov / (float)(viewport_width);
             const float pitch_per_px = vfov / (float)(viewport_height);
-            const Vec2F mouse_delta = m_input->mouse.delta;
+            const Vec2F mouse_delta = game.input->mouse.delta;
 
-            Scene::Actor* camera = Scene::get_actor(m_scene, player->children_handles[0]);
+            Scene::Actor* camera = Scene::get_actor(game.scene, player->children_handles[0]);
 
             if (camera != nullptr)
             {
@@ -218,19 +209,19 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
             float fwd = 0.0F;
             float rgt = 0.0F;
 
-            if (Input::is_key_down(*m_input, SDL_SCANCODE_W))
+            if (Input::is_key_down(*game.input, SDL_SCANCODE_W))
             {
                 fwd += 1.0F;
             }
-            if (Input::is_key_down(*m_input, SDL_SCANCODE_S))
+            if (Input::is_key_down(*game.input, SDL_SCANCODE_S))
             {
                 fwd -= 1.0F;
             }
-            if (Input::is_key_down(*m_input, SDL_SCANCODE_D))
+            if (Input::is_key_down(*game.input, SDL_SCANCODE_D))
             {
                 rgt += 1.0F;
             }
-            if (Input::is_key_down(*m_input, SDL_SCANCODE_A))
+            if (Input::is_key_down(*game.input, SDL_SCANCODE_A))
             {
                 rgt -= 1.0F;
             }
@@ -253,9 +244,9 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
 
         // TEST REMOVE
         {
-            if (Input::is_key_down(*m_input, SDL_SCANCODE_F))
+            if (Input::is_key_down(*game.input, SDL_SCANCODE_F))
             {
-                Scene::destroy_actor(m_scene, m_crate_handle, true);
+                Scene::destroy_actor(game.scene, game.crate_handle, true);
             }
         }
         // =================
@@ -264,15 +255,15 @@ void Game::update(const GameWindow::WindowState& window, double delta_time)
     ToolRenderer::update();
 }
 
-void Game::render()
+void Game::render(GameState& game)
 {
-    Renderer::begin_draw(*m_renderer);
-    Scene::render(m_scene, *m_renderer);
-    if (m_tool && m_is_tool_shown)
+    Renderer::begin_draw(*game.renderer);
+    Scene::render(game.scene, *game.renderer);
+    if (game.tool && game.is_tool_shown)
     {
-        ToolRenderer::show_scene_heirarchy(*m_tool, m_scene);
-        ToolRenderer::show_actor_properties(*m_tool, m_scene);
+        ToolRenderer::show_scene_heirarchy(*game.tool, game.scene);
+        ToolRenderer::show_actor_properties(*game.tool, game.scene);
     }
     ToolRenderer::render();
-    Renderer::end_draw(*m_renderer);
+    Renderer::end_draw(*game.renderer);
 }
